@@ -10,23 +10,26 @@ function App() {
             title: 'Example Project One',
             shortDesc: 'Not only is this an example, its the first one on the list!',
             imgURL: 'https://picsum.photos/300/200',
+            url: "https://www.coolmathgames.com/0-papas-wingeria"
         },
         {
             id: 2,
             title: 'Example Project Two',
             shortDesc: 'But don\'t count out the second example, it\'s great too!',
             imgURL: 'https://picsum.photos/300/200',
+            url: "https://github.com/collectioncard"
         },
         {
             id: 3,
             title: 'Example Project Three',
             shortDesc: 'Example three also exists.',
             imgURL: 'https://picsum.photos/300/200',
+            url: "https://collectioncard.itch.io/"
         },
     ];
 
     return (
-        <>
+        <div className="mainContainer">
             <header>
                 <h1>Thomas Wessel</h1>
                 <h2>I make seemingly unrelated stuff that usually ends up being pretty neat</h2>
@@ -42,7 +45,7 @@ function App() {
                     ))}
                 </div>
             </section>
-        </>
+        </div>
     )
 }
 
