@@ -1,0 +1,23 @@
+.note {
+    position: relative;
+    width: 300px;
+    height: 300px;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px black;
+    background-color: beige;
+    right: 50px;
+    bottom: 100px;
+}
+
+.note p {
+    max-width: 100%;
+    max-height: 250px;
+    overflow: auto;
+    margin: 10px;
+}
+
+.handle {
+    cursor: grab;
+    background-color: bisque;
+    border-radius: 2px;
+}
