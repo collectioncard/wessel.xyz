@@ -1,33 +1,80 @@
+import React, { useState } from 'react';
+import Draggable from "react-draggable";
+
 import './StickyNote.css'
 
-import Draggable from "react-draggable";
-import {useState} from "react";
+const StickyNote = () => {
+    const [notes, setNotes] = useState([]);
+    const fonts = ['Arial', 'Courier New', 'Georgia', 'Times New Roman', 'Verdana', "Anonymous Pro"];
+    const colors = ['beige', 'lightpink', 'lightblue', 'lightgreen', 'lavender', 'wheat'];
 
+    const addNote = () => {
+        const newStickyNote = {
+            id: notes.length + 1,
+            content: 'This is text that can be edited by YOU! Go ahead and try it out. You can also drag this note around the screen.',
+            position: {x: 0, y: 0},
+            fontIndex: 0,
+            colorIndex: 0,
+        };
 
+        setNotes([...notes, newStickyNote]);
+    };
 
-const StickyNote = ({ id, content, position }) => {
+    const handleRemoveNote = (id) => {
+        setNotes(notes.filter(note => note.id !== id));
+    }
 
-    const [StickyNotes, setStickyNotes] = useState([])
+    const handleFontChange = (id) => {
+        setNotes(notes.map(note => {
+            if (note.id === id) {
+                const newFontIndex = (note.fontIndex + 1) % fonts.length;
+                return { ...note, fontIndex: newFontIndex };
+            }
+            return note;
+        }));
+    };
+
+    const handleColorChange = (id) => {
+        setNotes(notes.map(note => {
+            if (note.id === id) {
+                const newColorIndex = (note.colorIndex + 1) % colors.length;
+                return { ...note, colorIndex: newColorIndex };
+            }
+            return note;
+        }));
+    };
 
     return (
-        <Draggable
-            key={id}
-            handle={".handle"}
-            defaultPosition={{x: position.x, y: position.y}}
-            position={null}
-            scale={1}
-            >
+        <>
+            <div className="stickyNotes">
+                {notes.map(note => (
+                    <Draggable
+                        key={note.id}
+                        handle={'.handle'}
+                        defaultPosition={{ x: note.position.x, y: note.position.y }}
+                        position={null}
+                        scale={1}
+                    >
+                        <div className="note" style={{fontFamily: fonts[note.fontIndex], backgroundColor: colors[note.colorIndex]}}>
+                            <div className="handle">
+                                <button className="fontButton" onClick={() => handleFontChange(note.id)}>A</button>
+                                <button className="colorButton" onClick={() => handleColorChange(note.id)}>🎨</button>
+                                <span className="dragText">New Note</span>
+                                <button className="closeButton" onClick={() => handleRemoveNote(note.id)}>X</button>
+                            </div>
 
-            <div className="note">
-                <div className="handle">Drag the note from here</div>
-                <p contentEditable="true">
-                    {content}
-                </p>
+                            <p contentEditable="true" suppressContentEditableWarning={true}>
+                                {note.content}
+                            </p>
+
+                        </div>
+                    </Draggable>
+                ))}
             </div>
-        </Draggable>
+            <button className="newNoteButton" onClick={addNote}>Leave me a note!</button>
+        </>
     )
 }
-
 
 
 export default StickyNote;
