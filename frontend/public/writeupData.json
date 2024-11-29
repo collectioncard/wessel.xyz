@@ -1,0 +1,90 @@
+{
+  "version": 1.01,
+  "lastEditDate": "2024-06-28",
+  "writeups": [
+    {
+      "title": "This is an example article title",
+      "subtitle": "This is an example subtitle. It will be shown under the main title",
+      "tags": [
+        "cool",
+        "wow",
+        "What????",
+        "this is the last tag"
+      ],
+      "images": [
+        "https://placehold.co/1920x1080",
+        "url_2"
+      ],
+      "description_short": "Not only is this an example, its the first one on the list!",
+      "description_long": "A much longer description. Printed directly to the page",
+      "url": "https://www.coolmathgames.com/0-papas-wingeria",
+      "resources": [
+        {
+          "resource_title": "Resource Name",
+          "resource_url": "Resource URL"
+        }
+      ]
+    },
+    {
+      "title": "A second writeup example",
+      "subtitle": "This is an example subtitle. It will be shown under the main title",
+      "tags": [
+        "cool",
+        "this is the last tag"
+      ],
+      "images": [
+        "https://placehold.co/600x400",
+        "https://placehold.co/1920x1080"
+      ],
+      "description_short": "This is a description that is a bit longer than the others to ensure that things offset correctly. I certainly hope everything looks correct! Idk... I'm just typing stuff at this point. Did you know that I have a turtle named Tinsel. She's pretty cool",
+      "description_long": "A much longer description. Printed directly to the page",
+      "url": "https://github.com/collectioncard",
+      "resources": [
+        {
+          "resource_title": "Resource Name",
+          "resource_url": "Resource URL"
+        }
+      ]
+    },
+    {
+      "title": "A third writeup example",
+      "subtitle": "This is an example subtitle. It will be shown under the main title",
+      "tags": [
+        "cool",
+        "this is the last tag"
+      ],
+      "images": [
+        "https://placehold.co/600x400",
+        "https://placehold.co/1920x1080"
+      ],
+      "description_short": "But don't count out the third example, it's great too!",
+      "description_long": "A much longer description. Printed directly to the page",
+      "resources": [
+        {
+          "resource_title": "Resource Name",
+          "resource_url": "Resource URL"
+        }
+      ]
+    },
+    {
+      "title": "A fourth writeup example",
+      "subtitle": "This is an example subtitle. It will be shown under the main title",
+      "tags": [
+        "cool",
+        "this is the last tag"
+      ],
+      "images": [
+        "https://placehold.co/600x400",
+        "https://placehold.co/1920x1080"
+      ],
+      "description_short": "Example three also exists.",
+      "description_long": "A much longer description. Printed directly to the page",
+      "resources": [
+        {
+          "resource_title": "Resource Name",
+          "resource_url": "Resource URL"
+        }
+      ]
+    }
+  ]
+}

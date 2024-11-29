@@ -1,0 +1,23 @@
+.projectThumbnailLink {
+    text-decoration: none;
+    color: inherit;
+}
+
+.projectThumbnail {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    margin: 10px;
+}
+
+.projectThumbnail:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 80px rgba(0, 0, 0, 0.2);
+}
+
+.projectThumbnail img {
+    max-width: 100%;
+    height: auto;
+}

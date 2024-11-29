@@ -1,35 +1,48 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect, useState } from 'react';
+import './App.css';
+import ProjectThumbnail from './components/project-thumbs/projectThumbnail';
+import Masonry, { ResponsiveMasonry } from "react-responsive-masonry";
+import { Project, ProjectData } from './scripts/ProjectData';
 
 function App() {
-  const [count, setCount] = useState(0)
+    const [projects, setProjects] = useState<Project[]>([]);
 
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    useEffect(() => {
+        const fetchProjects = async () => {
+            const fetchedProjects = await ProjectData.getProjects();
+            setProjects(fetchedProjects);
+            console.log(fetchedProjects);
+        };
+
+        fetchProjects();
+    }, []);
+
+    return (
+        <>
+            <div className="mainContainer">
+                <header>
+                    <h1>Thomas Wessel</h1>
+                    <h2>I make seemingly unrelated stuff that usually ends up being pretty neat</h2>
+                </header>
+                <div className="projectHeader">
+                    <p>Take a look at some of the projects that I've worked on</p>
+                </div>
+                <ResponsiveMasonry
+                    columnsCountBreakPoints={{ 350: 1, 750: 2 }}
+                    className="masonry"
+                >
+                    <Masonry>
+                        {projects.map((project) => (
+                            <ProjectThumbnail
+                                key={project.id}
+                                {...project}
+                            />
+                        ))}
+                    </Masonry>
+                </ResponsiveMasonry>
+            </div>
+        </>
+    );
 }
 
-export default App
+export default App;
