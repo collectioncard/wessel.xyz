@@ -1,0 +1,28 @@
+{
+  "engines": {
+    "node": ">=20.6.0"
+  },
+  "name": "wessel.xyz-backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "prestart": "cd ../frontend && npm run build && cd ../backend",
+    "build": "tsc",
+    "dev": "node --watch -r ts-node/register src/index.ts"
+  },
+  "keywords": [],
+  "author": "Thomas Wessel",
+  "license": "Affero General Public License v3.0",
+  "description": "Used for the backend of wessel.xyz",
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "express": "^4.21.1",
+    "socket.io": "^4.8.1",
+    "sqlite3": "^5.1.7"
+  }
+}
