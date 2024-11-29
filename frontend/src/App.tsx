@@ -3,9 +3,12 @@ import './App.css';
 import ProjectThumbnail from './components/project-thumbs/projectThumbnail';
 import Masonry, { ResponsiveMasonry } from "react-responsive-masonry";
 import { Project, ProjectData } from './scripts/ProjectData';
+import ProjectModal from './components/project-modal/ProjectModal';
 
 function App() {
     const [projects, setProjects] = useState<Project[]>([]);
+    const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
         const fetchProjects = async () => {
@@ -16,6 +19,16 @@ function App() {
 
         fetchProjects();
     }, []);
+
+    const openModal = (project: Project) => {
+        setSelectedProject(project);
+        setIsModalOpen(true);
+    };
+
+    const closeModal = () => {
+        setSelectedProject(null);
+        setIsModalOpen(false);
+    };
 
     return (
         <>
@@ -36,11 +49,17 @@ function App() {
                             <ProjectThumbnail
                                 key={project.id}
                                 {...project}
+                                onClick={() => openModal(project)}
                             />
                         ))}
                     </Masonry>
                 </ResponsiveMasonry>
             </div>
+            <ProjectModal
+                isOpen={isModalOpen}
+                onRequestClose={closeModal}
+                project={selectedProject}
+            />
         </>
     );
 }

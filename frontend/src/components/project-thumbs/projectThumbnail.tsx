@@ -2,15 +2,33 @@ import React from 'react';
 import './projectThumbnail.css';
 import { Project } from '../../scripts/ProjectData';
 
-const ProjectThumbnail: React.FC<Project> = (projectData) => {
+interface ProjectThumbnailProps extends Project {
+    onClick: () => void;
+}
+
+const ProjectThumbnail: React.FC<ProjectThumbnailProps> = ({ title, description_short, images, url, onClick }) => {
+    const handleClick = () => {
+        if (url) {
+            window.open(url);
+        } else {
+            onClick();
+        }
+    };
+
     return (
-        <a href={projectData.url} className="projectThumbnailLink">
-            <div className="projectThumbnail">
-                <h3>{projectData.title}</h3>
-                <img src={projectData.images[0]} alt={projectData.title} />
-                <p>{projectData.description_short}</p>
-            </div>
-        </a>
+        <div className="projectThumbnail" onClick={handleClick}>
+            <h3>{title}</h3>
+            <img src={images[0]} alt={title}/>
+            <p>
+                {description_short}
+                {url && (
+                    <>
+                        <br/>
+                        (opens to other site)
+                    </>
+                )}
+            </p>
+        </div>
     );
 };
 
