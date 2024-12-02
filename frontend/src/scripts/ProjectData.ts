@@ -3,6 +3,7 @@ interface Project {
     title: string;
     subtitle: string;
     tags: string[];
+    assetFolder: string;
     images: string[];
     description_short: string;
     description_long: string;
@@ -30,6 +31,7 @@ class ProjectData {
             title: writeup.title,
             subtitle: writeup.subtitle,
             tags: writeup.tags,
+            assetFolder: writeup.assetFolder,
             images: writeup.images,
             description_short: writeup.description_short,
             description_long: writeup.description_long,
