@@ -1,4 +1,9 @@
 interface Project {
+    page_body: string;
+    authors: {
+        name: string;
+        url: string
+    }[];
     id: number;
     title: string;
     subtitle: string;
@@ -6,7 +11,6 @@ interface Project {
     assetFolder: string;
     images: string[];
     description_short: string;
-    description_long: string;
     url: string;
     resources: {
         resource_title: string;
@@ -34,9 +38,10 @@ class ProjectData {
             assetFolder: writeup.assetFolder,
             images: writeup.images,
             description_short: writeup.description_short,
-            description_long: writeup.description_long,
+            page_body: writeup.page_body,
             url: writeup.url,
             resources: writeup.resources,
+            authors: writeup.authors || []
         }));
     }
 }

@@ -14,6 +14,15 @@ Modal.setAppElement('#root');
 const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onRequestClose, project }) => {
     if (!project) return null;
 
+    //generate a string of every author in the authors array
+    let authors2 = 'Created by: ';
+    project.authors.forEach((author, index) => {
+        authors2 += author.name;
+        if (index !== project.authors.length - 1) {
+            authors2 += ', ';
+        }
+    });
+
     return (
         <Modal
             isOpen={isOpen}
@@ -22,9 +31,10 @@ const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onRequestClose, pro
             overlayClassName="modalOverlay"
             className="modalContent"
         >
-            <h2>{project.title}</h2>
+            <h1>{project.title}</h1>
             <h3>{project.subtitle}</h3>
-            <p>{project.description_long}</p>
+            <h6>{authors2}</h6>
+            <p>{project.page_body}</p>
             <button onClick={onRequestClose}>Close</button>
         </Modal>
     );

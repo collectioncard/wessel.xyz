@@ -1,10 +1,17 @@
 {
   "version": 1.01,
-  "lastEditDate": "2024-06-28",
+  "lastEditDate": "2024-12-04",
   "writeups": [
     {
       "title": "Pizza With Gun",
       "subtitle": "A platformer with elementary procedural generation features",
+      "description_short": "A 2D platformer with procedural map generation",
+      "tags": [
+        "PCG",
+        "Platformer",
+        "2D",
+        "Phaser"
+      ],
       "authors": [
         {
           "name": "Thomas Wessel",
@@ -19,86 +26,114 @@
           "github": "https://github.com/JackWilhelm"
         }
       ],
-      "tags": [
-        "PCG",
-        "Platformer",
-        "2D",
-        "Phaser"
-      ],
-      "assetFolder": "pizzaWithGun",
       "images": [
         "pwg.png",
         "pwg1.png",
         "pwg2.png",
         "pwg3.png"
       ],
-      "description_short": "A 2D platformer with procedural map generation",
-      "page_body": "A much longer description. Supports markdown",
+      "assetFolder": "pizzaWithGun",
+      "page_body": "[placeholder for page body]",
       "resources": [
         {
-          "resource_title": "Resource Name",
-          "resource_url": "Resource URL"
+          "resource_title": "itch.io page",
+          "resource_url": "https://lifehckr.itch.io/pizza-with-gun"
+        },
+        {
+          "resource_title": "GitHub repository",
+          "resource_url": "https://github.com/LifeHckr/SpaghettiCodeInDarkMode"
         }
       ]
     },
     {
       "title": "Vera",
-      "subtitle": "This is an example subtitle. It will be shown under the main title",
+      "subtitle": "A discord bot library for Java",
+      "description_short": "Discord bot creation made easier",
       "tags": [
-        "cool",
-        "this is the last tag"
+        "Java",
+        "discord",
+        "Team Creative Name"
       ],
-      "assetFolder": "2",
+      "authors": [
+        {
+          "name": "Thomas Wessel",
+          "url": "https://github.com/collectioncard"
+        }
+      ],
       "images": [
-        "https://placehold.co/600x400",
-        "https://placehold.co/1920x1080"
+        "https://opengraph.githubassets.com/v4/Team-Creative-Name/Vera"
       ],
-      "description_short": "A Discord API library designed to make bot creation with Java easier",
-      "description_long": "A much longer description. Printed directly to the page",
+      "assetFolder": "vera",
+      "page_body": "[placeholder for page body]",
       "resources": [
         {
-          "resource_title": "Resource Name",
-          "resource_url": "Resource URL"
+          "resource_title": "GitHub repository",
+          "resource_url": "https://github.com/Team-Creative-Name/Vera"
         }
       ]
     },
     {
       "title": "Im-POSE-able",
-      "subtitle": "This is an example subtitle. It will be shown under the main title",
+      "subtitle": "A webcam-based motion-tracking social party game.",
+      "description_short": "A webcam based motion tracking game",
       "tags": [
-        "cool",
-        "this is the last tag"
+        "social",
+        "motion tracking",
+        "AI"
+      ],
+      "authors": [
+        {
+          "name": "Thomas Wessel",
+          "url": "https://github.com/collectioncard"
+        }
       ],
       "images": [
-        "https://placehold.co/600x400",
-        "https://placehold.co/1920x1080"
+        "hello.png"
       ],
-      "description_short": "A webcam based motion tracking game",
-      "description_long": "A much longer description. Printed directly to the page",
-      "resources": [
-        {
-          "resource_title": "Resource Name",
-          "resource_url": "Resource URL"
-        }
-      ]
+      "assetFolder": "pose",
+      "page_body": "[placeholder for page body]"
     },
     {
-      "title": "A fourth writeup example",
-      "subtitle": "This is an example subtitle. It will be shown under the main title",
+      "title": "Good Boy Virtual Pet",
+      "subtitle": "An LLM backed by a state machine as your new best friend",
+      "description_short": "An example of how LLMs can power npcs in games",
       "tags": [
-        "cool",
-        "this is the last tag"
+        "AI",
+        "LLM",
+        "State Machine",
+        "Virtual Pet"
+      ],
+      "authors": [
+        {
+          "name": "Thomas Wessel",
+          "url": "https://github.com/collectioncard"
+        },
+        {
+          "name": "Jacqueline Gracey",
+          "url": "https://github.com/JcGracey1"
+        },
+        {
+          "name": "Michael Campanile",
+          "url": "https://github.com/mecampan"
+        },
+        {
+          "name": "Michael Alaniz",
+          "url": "https://github.com/mialaniz"
+        }
       ],
       "images": [
-        "https://placehold.co/600x400",
-        "https://placehold.co/1920x1080"
+        "https://img.itch.zone/aW1hZ2UvMjkzNDQ4OS8xNzYxMzUxMC5wbmc=/347x500/STupNZ.png"
       ],
-      "description_short": "Example four also exists.",
-      "description_long": "A much longer description. Printed directly to the page",
+      "assetFolder": "gbvp",
+      "page_body": "[placeholder for page body]",
       "resources": [
         {
-          "resource_title": "Resource Name",
-          "resource_url": "Resource URL"
+          "resource_title": "Itch.io page",
+          "resource_url": "https://collectioncard.itch.io/good-boy-virtual-pet"
+        },
+        {
+          "resource_title": "GitHub repository",
+          "resource_url": "https://github.com/collectioncard/Good-Boy-VP"
         }
       ]
     }

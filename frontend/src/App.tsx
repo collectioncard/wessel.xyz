@@ -41,7 +41,7 @@ function App() {
                     <p>Take a look at some of the projects that I've worked on</p>
                 </div>
                 <ResponsiveMasonry
-                    columnsCountBreakPoints={{ 350: 1, 750: 2 }}
+                    columnsCountBreakPoints={{350: 1, 750: 2}}
                     className="masonry"
                 >
                     <Masonry>
