@@ -63,9 +63,9 @@ const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onRequestClose, pro
             overlayClassName="modalOverlay"
             className="modalContent"
         >
-            <h1>{project.title}</h1>
-            <h3>{project.subtitle}</h3>
-            <h6>Created by: {authors}</h6>
+            <h1 className={"centered"}>{project.title}</h1>
+            <h3 className={"centered"}>{project.subtitle}</h3>
+            <h6 className={"centered"}>Created by: {authors}</h6>
             <div className="carouselContainer">
                 <Carousel
                     responsive={responsive}
@@ -76,6 +76,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onRequestClose, pro
                 >
                     {project.images.map((image, index) => (
                         <img
+                            className={"showcaseImage"}
                             key={index}
                             src={
                                 image.startsWith('http')
