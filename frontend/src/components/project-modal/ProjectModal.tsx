@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Modal from 'react-modal';
-import { Project } from '../../scripts/ProjectData';
-import './ProjectModal.css';
 import Carousel from 'react-multi-carousel';
 import 'react-multi-carousel/lib/styles.css';
+import { Project } from '../../scripts/ProjectData';
+import MarkdownRenderer from '../markdown-renderer/MarkdownRenderer.tsx';
+import './ProjectModal.css';
 
 interface ProjectModalProps {
     isOpen: boolean;
@@ -21,13 +22,23 @@ const responsive = {
 };
 
 const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onRequestClose, project }) => {
+    const [markdownContent, setMarkdownContent] = useState<string>('');
+
     useEffect(() => {
-        if (isOpen) {
+        if (isOpen && project) {
             document.body.style.overflow = 'hidden';
+            const filePath = `projects/${project.assetFolder}/writeup.md`;
+            fetch(filePath)
+                .then(response => response.text())
+                .then(data => setMarkdownContent(data))
+                .catch(err => {
+                    console.error('Error fetching markdown file:', err);
+                    setMarkdownContent('This page does not have a writeup');
+                });
         } else {
             document.body.style.overflow = 'auto';
         }
-    }, [isOpen]);
+    }, [isOpen, project]);
 
     if (!project) return null;
 
@@ -67,16 +78,19 @@ const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onRequestClose, pro
                         <img
                             key={index}
                             src={
-                                image.startsWith("http")
+                                image.startsWith('http')
                                     ? image
-                                    : `images/${project.assetFolder}/${image}`
+                                    : `projects/${project.assetFolder}/img/${image}`
+
                             }
                             alt={`Slide ${index}`}
                         />
                     ))}
                 </Carousel>
             </div>
-            <p>{project.page_body}</p>
+            <div className="markdownContainer">
+                <MarkdownRenderer content={markdownContent} />
+            </div>
             <button onClick={onRequestClose}>Close</button>
         </Modal>
     );

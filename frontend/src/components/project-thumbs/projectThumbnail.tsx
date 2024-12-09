@@ -18,7 +18,7 @@ const ProjectThumbnail: React.FC<ProjectThumbnailProps> = ({ title, description_
     const thumbnail = images
         ? images[0].startsWith("http")
             ? images[0]
-            : `images/${assetFolder}/${images[0]}`
+            : `projects/${assetFolder}/img/${images[0]}`
         : "https://placehold.co/600x400";
 
     return (

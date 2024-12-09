@@ -32,7 +32,7 @@
         "pwg2.png",
         "pwg3.png"
       ],
-      "assetFolder": "pizzaWithGun",
+      "assetFolder": "pwg",
       "page_body": "[placeholder for page body]",
       "resources": [
         {
@@ -64,7 +64,6 @@
         "https://opengraph.githubassets.com/v4/Team-Creative-Name/Vera"
       ],
       "assetFolder": "vera",
-      "page_body": "[placeholder for page body]",
       "resources": [
         {
           "resource_title": "GitHub repository",
@@ -90,8 +89,7 @@
       "images": [
         "hello.png"
       ],
-      "assetFolder": "pose",
-      "page_body": "[placeholder for page body]"
+      "assetFolder": "poseGame"
     },
     {
       "title": "Good Boy Virtual Pet",
@@ -125,7 +123,6 @@
         "https://img.itch.zone/aW1hZ2UvMjkzNDQ4OS8xNzYxMzUxMC5wbmc=/347x500/STupNZ.png"
       ],
       "assetFolder": "gbvp",
-      "page_body": "[placeholder for page body]",
       "resources": [
         {
           "resource_title": "Itch.io page",
