@@ -36,6 +36,7 @@ function App() {
                 <header>
                     <h1>Thomas Wessel</h1>
                     <h2>I make seemingly unrelated stuff that usually ends up being pretty neat</h2>
+                    <h3><a href="https://docs.google.com/document/d/158I-peZDIZNFvw30WkYq4zKa8BadVcCwm4fJmsCpsjw/export?format=pdf">Download my resume here</a></h3>
                 </header>
                 <div className="projectHeader">
                     <p>Take a look at some of the projects that I've worked on</p>
