@@ -18,7 +18,7 @@ export function inlineEditor(root, state) {
  const links=$('.resources-editor');links.classList.add('inline-links');heading.append(links);
  const credits=$('.authors-editor');credits.classList.add('project-credits');header.append(heading,credits);story.append(header);
  const writing=$('.story-writing');writing.classList.add('project-story');story.append(writing);
- const gallery=$('.gallery-editor');gallery.className='inline-cover';story.insertBefore(gallery,header);
+ const gallery=$('.gallery-editor');gallery.className='inline-cover';story.insertBefore(gallery,writing);
  const upload=$('#header-gallery-files');upload.hidden=true;
  const add=document.createElement('button');add.type='button';add.className='inline-add';add.textContent='+ Photos';add.onclick=()=>upload.click();
  const hide=document.createElement('button');hide.type='button';hide.className='cover-hide';

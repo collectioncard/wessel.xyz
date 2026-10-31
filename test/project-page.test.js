@@ -55,7 +55,7 @@ test('header gallery renders as a carousel and normalizes local images', () => {
  assert.match(html,/data-carousel="true"/);
  assert.match(html,/src="\/uploads\/first.png"/);
  assert.match(html,/src="\/uploads\/second.png"/);
- assert.ok(html.indexOf('aria-label="Project screenshots"')<html.indexOf('<header class="project-header'));
+ assert.ok(html.indexOf('<header class="project-header')<html.indexOf('aria-label="Project screenshots"'));
  const hidden=projectPage({title:'Gallery',gallery,hide_cover:1},'<p>Story</p>');
  assert.doesNotMatch(hidden,/aria-label="Project screenshots"|src="\/uploads\/first.png"/);
 });
