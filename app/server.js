@@ -1,4 +1,4 @@
-import { clean, projectPage, highlight, languages, normalizeAuthors } from './project-page.js';
+import { clean, projectPage, highlight, languages, normalizeAuthors, normalizeResources } from './project-page.js';
 import http from 'node:http';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, readFileSync, writeFileSync, existsSync, statSync } from 'node:fs';
@@ -13,6 +13,7 @@ if (!db.prepare('PRAGMA table_info(projects)').all().some(c => c.name === 'tags'
 if (!db.prepare('PRAGMA table_info(projects)').all().some(c => c.name === 'authors')) db.exec("ALTER TABLE projects ADD COLUMN authors TEXT NOT NULL DEFAULT '[]'");
 if (!db.prepare('PRAGMA table_info(projects)').all().some(c => c.name === 'deleted_at')) db.exec("ALTER TABLE projects ADD COLUMN deleted_at TEXT");
 if (!db.prepare('PRAGMA table_info(projects)').all().some(c => c.name === 'published_at')) db.exec("ALTER TABLE projects ADD COLUMN published_at TEXT");
+if (!db.prepare('PRAGMA table_info(projects)').all().some(c => c.name === 'resources')) db.exec("ALTER TABLE projects ADD COLUMN resources TEXT NOT NULL DEFAULT '[]'");
 db.exec("CREATE TABLE IF NOT EXISTS project_drafts (project_id INTEGER PRIMARY KEY, payload TEXT NOT NULL, updated TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE)");
 const password = process.env.ADMIN_PASSWORD;
 const oidc = process.env.AUTHENTIK_ISSUER && process.env.OIDC_CLIENT_ID && process.env.OIDC_CLIENT_SECRET && process.env.OIDC_REDIRECT_URI ? {
@@ -36,7 +37,7 @@ function sameOrigin(req) { const origin=req.headers.origin; if (!origin) return 
 const staticFiles = {'/highlight.css':['node_modules/highlight.js/styles/github-dark.css','text/css'], '/project.css':['public/project.css','text/css'], '/carousels.js':['public/carousels.js','text/javascript'], '/medium-editor.js':['node_modules/medium-editor/dist/js/medium-editor.js','text/javascript'], '/medium-editor.css':['node_modules/medium-editor/dist/css/medium-editor.css','text/css'], '/medium-theme.css':['node_modules/medium-editor/dist/css/themes/default.css','text/css'], '/style.css':['public/style.css','text/css'], '/admin.js':['public/admin.js','text/javascript'], '/admin-enhancements.js':['public/admin-enhancements.js','text/javascript']};
 const server = http.createServer(async (req,res) => { try {
  const url=new URL(req.url, 'http://localhost'); const path=url.pathname;
- if (path === '/writeupData.json') { const original=JSON.parse(readFileSync('frontend/public/writeupData.json','utf8')); const added=db.prepare('SELECT * FROM projects WHERE published=1 AND deleted_at IS NULL ORDER BY updated DESC').all().map(p=>({title:p.title,subtitle:p.summary,description_short:p.summary,assetFolder:'cms-'+p.slug,images:p.cover?[p.cover]:[],authors:normalizeAuthors(p.authors),tags:JSON.parse(p.tags),resources:[]})); original.writeups.push(...added); return json(res,200,original); }
+ if (path === '/writeupData.json') { const original=JSON.parse(readFileSync('frontend/public/writeupData.json','utf8')); const added=db.prepare('SELECT * FROM projects WHERE published=1 AND deleted_at IS NULL ORDER BY updated DESC').all().map(p=>({title:p.title,subtitle:p.summary,description_short:p.summary,assetFolder:'cms-'+p.slug,images:p.cover?[p.cover]:[],authors:normalizeAuthors(p.authors),tags:JSON.parse(p.tags),resources:normalizeResources(p.resources)})); original.writeups.push(...added); return json(res,200,original); }
  if (path.startsWith('/content/')) { const p=db.prepare('SELECT * FROM projects WHERE slug=? AND published=1 AND deleted_at IS NULL').get(path.slice(9)); return p ? json(res,200,{html:renderBody(p.body)}) : json(res,404,{error:'Not found'}); }
  if (req.method==='GET' && (path==='/' || path.startsWith('/assets/') || path.startsWith('/projects/') || path==='/favicon.png')) { const file=path==='/'?'frontend/dist/index.html':join('frontend/dist',path); if(existsSync(file) && statSync(file).isFile() && !path.includes('..')) { const ext=file.split('.').pop(); return send(res,200,readFileSync(file),{html:'text/html',js:'text/javascript',css:'text/css',png:'image/png',md:'text/plain'}[ext]||'application/octet-stream'); } }
 
@@ -82,18 +83,20 @@ const server = http.createServer(async (req,res) => { try {
   if(!title || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length>150) return json(res,400,{error:'A title and a lowercase, hyphenated slug are required.'});
   if(!Array.isArray(p.body) || p.body.length>500) return json(res,400,{error:'Invalid content'});
   if(p.authors!==undefined && !Array.isArray(p.authors)) return json(res,400,{error:'Authors must be a list.'});
+  if(p.resources!==undefined && !Array.isArray(p.resources)) return json(res,400,{error:'Project links must be a list.'});
   const body=JSON.stringify(p.body.map(b=>({type:['html','paragraph','heading','quote','code','image'].includes(b.type)?b.type:'paragraph',text:String(b.text||'').slice(0,30000),src:String(b.src||''),html:b.type==='html'?clean(String(b.html||'')):''})));
   const tags=JSON.stringify([...new Set((Array.isArray(p.tags)?p.tags:[]).map(t=>String(t).trim().slice(0,50)).filter(Boolean))].slice(0,30));
   const cover=String(p.cover||'');
   if(cover && !/^\/uploads\/[a-f0-9]+\.(png|jpg|webp|gif)$/.test(cover)) return json(res,400,{error:'Invalid cover image'});
-  const current=p.id?db.prepare('SELECT published_at, authors FROM projects WHERE id=?').get(Number(p.id)):null;
+  const current=p.id?db.prepare('SELECT published_at, authors, resources FROM projects WHERE id=?').get(Number(p.id)):null;
   const authors=JSON.stringify(normalizeAuthors(p.authors===undefined?current?.authors:p.authors));
+  const resources=JSON.stringify(normalizeResources(p.resources===undefined?current?.resources:p.resources));
   const requestedDate=String(p.published_at||'');
   const publishedAt=p.published?(requestedDate||current?.published_at||new Date().toISOString().slice(0,10)):current?.published_at||null;
   if(publishedAt && !/^\d{4}-\d{2}-\d{2}$/.test(publishedAt)) return json(res,400,{error:'Published date must be YYYY-MM-DD.'});
   try {
-   if(p.id) db.prepare('UPDATE projects SET title=?, slug=?, summary=?, cover=?, body=?, published=?, tags=?, authors=?, published_at=?, updated=CURRENT_TIMESTAMP WHERE id=?').run(title,slug,String(p.summary||'').slice(0,500),cover,body,p.published?1:0,tags,authors,publishedAt,Number(p.id));
-   else db.prepare('INSERT INTO projects (title,slug,summary,cover,body,published,tags,authors,published_at) VALUES (?,?,?,?,?,?,?,?,?)').run(title,slug,String(p.summary||'').slice(0,500),cover,body,p.published?1:0,tags,authors,publishedAt);
+   if(p.id) db.prepare('UPDATE projects SET title=?, slug=?, summary=?, cover=?, body=?, published=?, tags=?, authors=?, resources=?, published_at=?, updated=CURRENT_TIMESTAMP WHERE id=?').run(title,slug,String(p.summary||'').slice(0,500),cover,body,p.published?1:0,tags,authors,resources,publishedAt,Number(p.id));
+   else db.prepare('INSERT INTO projects (title,slug,summary,cover,body,published,tags,authors,resources,published_at) VALUES (?,?,?,?,?,?,?,?,?,?)').run(title,slug,String(p.summary||'').slice(0,500),cover,body,p.published?1:0,tags,authors,resources,publishedAt);
   } catch(e) { if(String(e).includes('UNIQUE')) return json(res,400,{error:'That URL is already in use.'}); throw e; }
   return json(res,200,{ok:true});
  }

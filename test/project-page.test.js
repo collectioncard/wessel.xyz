@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeAuthors, projectPage } from '../app/project-page.js';
+import { normalizeAuthors, normalizeResources, projectPage } from '../app/project-page.js';
 
 test('credits accept saved and legacy authors and keep profile links safe', () => {
  const authors = normalizeAuthors(JSON.stringify([
@@ -32,4 +32,18 @@ test('a screenshot gallery replaces the separate cover and unsafe resources are 
  assert.doesNotMatch(html,/Unsafe link|javascript:|class="cover"/);
  const solo=projectPage({title:'Solo'},'<p>Story</p>');
  assert.doesNotMatch(solo,/class="project-credits"|id="credits-title"|class="project-media"/);
+});
+
+test('project links normalize safely and render as resource buttons', () => {
+ const resources = normalizeResources(JSON.stringify([
+  {resource_title:' GitHub repository ',resource_url:'https://github.com/example/project'},
+  {resource_title:'Unsafe',resource_url:'javascript:alert(1)'},
+  {resource_title:'',resource_url:'https://example.com'}
+ ]));
+ assert.deepEqual(resources,[{resource_title:'GitHub repository',resource_url:'https://github.com/example/project'}]);
+ const html=projectPage({title:'Links',resources},'<p>Story</p>');
+ assert.match(html,/class="project-links"/);
+ assert.match(html,/GitHub repository/);
+ assert.match(html,/href="https:\/\/github.com\/example\/project"/);
+ assert.doesNotMatch(html,/javascript:|Unsafe/);
 });
