@@ -31,7 +31,7 @@ test('rich projects preserve tags and carousels and keep drafts private',async()
  const html=`<h2>Story</h2><p>A <strong>rich</strong> paragraph</p><figure data-carousel="true"><div data-slide="true"><img src="${uploaded.url}" alt="First image"><figcaption>First caption</figcaption></div><div data-slide="true"><img src="${uploaded.url}" alt="Second image"></div></figure><pre data-language="python"><code>def hello():\n    return True</code></pre><script>alert(1)</script>`;
  const authors=[{name:'Thomas Wessel',role:'Programming',url:'https://github.com/collectioncard'},{name:'Jarod Spangler',role:'Game design',url:'https://github.com/LifeHckr'}];
  const resources=[{resource_title:'GitHub repository',resource_url:'https://github.com/example/gallery'},{resource_title:'Unsafe',resource_url:'javascript:alert(1)'}];
- const gallery=[uploaded.url,'/uploads/second.png'];
+ const gallery=[{src:uploaded.url,alt:'Cover description',caption:'Cover caption'},'/uploads/second.png'];
  const p={title:'Gallery project',slug:'gallery-project',summary:'An experiment',cover:uploaded.url,tags:['Art','Code','Art'],authors,resources,gallery,body:[{type:'html',html}],published:false};
  let r=await fetch(base+'/api/projects',{method:'POST',headers,body:JSON.stringify(p)});assert.equal(r.status,200);
  assert.equal((await fetch(base+'/projects/gallery-project')).status,404);
@@ -41,6 +41,9 @@ test('rich projects preserve tags and carousels and keep drafts private',async()
  assert.match(page,/data-carousel="true"/);assert.match(page,/First caption/);assert.match(page,/language-python/);assert.match(page,/hljs-keyword/);assert.match(page,/alt="First image"/);assert.match(page,/<strong>rich<\/strong>/);assert.match(page,/>Art<\/span>/);assert.match(page,/January 2, 2024/);assert.doesNotMatch(page,/alert\(1\)/);
  assert.match(page,/Created by/);assert.match(page,/Jarod Spangler/);assert.match(page,/Game design/);assert.match(page,/href="https:\/\/github.com\/LifeHckr"/);assert.match(page,/GitHub repository/);assert.match(page,/href="https:\/\/github.com\/example\/gallery"/);assert.doesNotMatch(page,/Unsafe|javascript:/);
  assert.match(page,/data-carousel="true"/);assert.match(page,/src="\/uploads\/second.png"/);
+ assert.match(page,/alt="Cover description"/);assert.match(page,/<figcaption>Cover caption<\/figcaption>/);
+ assert.equal(homepage.includes('Cover caption'),false);
+ const preview=await(await fetch(base+'/api/project-preview',{method:'POST',headers,body:JSON.stringify(p)})).json();assert.match(preview.html,/<figcaption>Cover caption<\/figcaption>/);assert.match(preview.html,/Thomas Wessel/);assert.match(preview.html,/GitHub repository/);
  const draft={...p,id:saved.id,published:false,authors:[{name:'Pending collaborator',role:'Design',url:'https://example.com/author'}],summary:'Pending revision',body:[{type:'html',html:'<p>Changed draft</p>'}]};
  r=await fetch(base+`/api/projects/${saved.id}/draft`,{method:'POST',headers,body:JSON.stringify(draft)});assert.equal(r.status,200);
  const withDraft=(await(await fetch(base+'/api/projects',{headers})).json())[0];assert.ok(withDraft.draft_payload);assert.match((await(await fetch(base+'/projects/gallery-project')).text()),/First caption/);assert.doesNotMatch((await(await fetch(base+'/projects/gallery-project')).text()),/Changed draft/);
@@ -48,6 +51,7 @@ test('rich projects preserve tags and carousels and keep drafts private',async()
  r=await fetch(base+`/api/projects/${saved.id}/clear-draft`,{method:'POST',headers});assert.equal(r.status,200);
  const home=await(await fetch(base+'/writeupData.json')).json();assert.ok(home.writeups.some(p=>p.title==='Gallery project'&&p.tags.includes('Code')));
  assert.deepEqual(home.writeups.find(project=>project.title==='Gallery project').authors,authors);
+ assert.deepEqual(home.writeups.find(project=>project.title==='Gallery project').images,[uploaded.url,'/uploads/second.png']);
  r=await fetch(base+'/api/projects',{method:'POST',headers,body:JSON.stringify({...p,id:saved.id,published:true,authors:draft.authors})});assert.equal(r.status,200);
  assert.match((await(await fetch(base+'/projects/gallery-project')).text()),/Pending collaborator/);
  const {authors:omittedAuthors,...oldClient}=p;
@@ -60,5 +64,14 @@ test('rich projects preserve tags and carousels and keep drafts private',async()
  r=await fetch(base+`/api/projects/${saved.id}/restore`,{method:'POST',headers});assert.equal(r.status,200);assert.equal((await(await fetch(base+'/api/projects',{headers})).json()).length,1);
  r=await fetch(base+`/api/projects/${saved.id}`,{method:'DELETE',headers});assert.equal(r.status,200);r=await fetch(base+`/api/projects/${saved.id}?permanent=true`,{method:'DELETE',headers});assert.equal(r.status,200);assert.equal((await(await fetch(base+'/api/trash',{headers})).json()).length,0);
  assert.equal((await fetch(base+'/projects/pwg')).status,404);
+ const duplicate={title:'Same name',slug:'same-name',body:[],published:false};
+ const create=async()=>{const response=await fetch(base+'/api/projects',{method:'POST',headers,body:JSON.stringify(duplicate)});assert.equal(response.status,200);return response.json();};
+ const first=await create(),second=await create();assert.equal(first.slug,'same-name');assert.equal(second.slug,'same-name-1');
+ await fetch(base+`/api/projects/${first.id}`,{method:'DELETE',headers});
+ const replacement=await create();assert.equal(replacement.slug,'same-name');
+ const restored=await fetch(base+`/api/projects/${first.id}/restore`,{method:'POST',headers});assert.equal(restored.status,200);
+ const all=await(await fetch(base+'/api/projects',{headers})).json();
+ assert.equal(all.find(project=>project.id===first.id).slug,'same-name-2');
+ assert.equal(all.find(project=>project.id===replacement.id).slug,'same-name');
  } finally {child.kill();rmSync(data,{recursive:true,force:true});}
 });

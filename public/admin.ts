@@ -1,5 +1,6 @@
 import { enhanceCarousels } from './carousels.js';
 import './admin-enhancements.js';
+import { normalizeSlides } from './gallery.js';
 import { inlineEditor } from './inline-editor.js';
 const root=document.querySelector<HTMLElement>('#app')!;
 const esc=s=>String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
@@ -14,7 +15,7 @@ function edit(project) {
  activeEditor?.destroy();
  let blocks; try { blocks=JSON.parse(project.body); } catch { blocks=[]; }
  const legacy=blocks.map(b=>b.type==='html'?b.html:b.type==='image'?`<img src="${esc(b.src)}">`:`<${b.type==='heading'?'h2':b.type==='quote'?'blockquote':b.type==='code'?'pre':'p'}>${esc(b.text)}</${b.type==='heading'?'h2':b.type==='quote'?'blockquote':b.type==='code'?'pre':'p'}>`).join('');
- let cover=project.cover; let dirty=false; let tags=[]; try { tags=JSON.parse(project.tags||'[]'); } catch {} let resources=[]; try { resources=Array.isArray(project.resources)?structuredClone(project.resources):JSON.parse(project.resources||'[]'); } catch {} if(!Array.isArray(resources)) resources=[]; let headerGallery=[]; try { headerGallery=Array.isArray(project.gallery)?structuredClone(project.gallery):JSON.parse(project.gallery||'[]'); } catch {} if(!Array.isArray(headerGallery)) headerGallery=[]; let publishedAt=project.published_at||'';
+ let cover=project.cover; let dirty=false; let tags=[]; try { tags=JSON.parse(project.tags||'[]'); } catch {} let resources=[]; try { resources=Array.isArray(project.resources)?structuredClone(project.resources):JSON.parse(project.resources||'[]'); } catch {} if(!Array.isArray(resources)) resources=[]; let headerGallery=[]; try { headerGallery=Array.isArray(project.gallery)?structuredClone(project.gallery):JSON.parse(project.gallery||'[]'); } catch {} headerGallery=normalizeSlides(headerGallery); let publishedAt=project.published_at||'';
  root.innerHTML=`<div class="editor-top"><button class="text-button" id="back">← Projects</button><span id="save-status" role="status">${project.published?'Published':'Draft'}</span><div><button class="secondary" id="settings">Story settings</button> <button class="secondary" id="preview">Preview</button> <button class="secondary" id="draft">Save draft</button> <button id="publish">Publish</button></div></div><section class="medium-story"><input id="title" aria-label="Title" placeholder="Title" value="${esc(project.title)}"><textarea id="summary" aria-label="Subtitle" placeholder="Tell your story…">${esc(project.summary)}</textarea><div class="story-writing"><button id="image" aria-label="Insert image" title="Insert image">+</button><div id="insert-menu" hidden><button data-insert="image">Image</button><button data-insert="carousel">Image carousel</button><button data-insert="code">Code block</button><button data-insert="divider">Divider</button></div><div id="story">${legacy||'<p><br></p>'}</div></div></section><input id="image-file" type="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden><dialog id="settings-dialog"><h2>Story settings</h2><label>URL slug<input id="slug" value="${esc(project.slug)}"></label><label>Tags (comma separated)<input id="tags" value="${esc(tags.join(', '))}" placeholder="Java, Game development, AI"></label><label>Cover image<input id="cover" type="file" accept="image/png,image/jpeg,image/gif,image/webp"></label><p id="cover-status">${cover?'Cover image selected':''}</p><button id="settings-close">Done</button></dialog><dialog id="gallery-dialog"><h2>Image carousel</h2><p>Add images, captions, and descriptions. Use the arrows to change their order.</p><input id="gallery-files" type="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple><div id="gallery-items"></div><p id="gallery-error" role="alert"></p><button id="gallery-cancel" class="secondary">Cancel</button> <button id="gallery-done">Insert carousel</button></dialog><dialog id="code-dialog"><h2>Code block</h2><label>Language<select id="code-language"><option value="plaintext">Plain text</option></select></label><label>Code<textarea id="code-source" spellcheck="false" placeholder="Paste or write your code here"></textarea></label><div id="code-highlight-preview"></div><p id="code-error" role="alert"></p><button id="code-cancel" class="secondary">Cancel</button> <button id="code-done">Insert code</button></dialog><dialog id="preview-dialog"><button id="close-preview" class="text-button">Close ✕</button><article id="preview-content"></article></dialog>`;
  const $=s=>root.querySelector(s);
  let authors=[];
@@ -51,7 +52,7 @@ function edit(project) {
  $('#settings-dialog').insertBefore(gallerySettings,$('#settings-close'));
  const galleryChanged=()=>{dirty=true;$('#save-status').textContent='Unsaved changes';scheduleAutosave();};
  const drawHeaderGallery=()=>{
-  $('#header-gallery-rows').innerHTML=headerGallery.map((src,index)=>`<div class="header-gallery-row"><img src="${esc(src)}" alt=""><span>${index===0?'Homepage image':'Carousel image '+(index+1)}</span><button class="text-button" type="button" data-remove-header-gallery="${index}">Remove</button></div>`).join('');
+  $('#header-gallery-rows').innerHTML=headerGallery.map((slide,index)=>`<div class="header-gallery-row"><img src="${esc(slide.src)}" alt=""><span>${index===0?'Homepage image':'Carousel image '+(index+1)}</span><button class="text-button" type="button" data-remove-header-gallery="${index}">Remove</button></div>`).join('');
   $('#header-gallery-rows').querySelectorAll('[data-remove-header-gallery]').forEach(button=>button.onclick=()=>{headerGallery.splice(Number(button.dataset.removeHeaderGallery),1);galleryChanged();drawHeaderGallery();});
  };
  drawHeaderGallery();
@@ -88,7 +89,7 @@ function edit(project) {
  function scheduleAutosave(){revision++;clearTimeout(autosaveTimer);if(!disposed)autosaveTimer=setTimeout(autosave,1200);}
  async function upload(file){const r=await fetch('/api/upload',{method:'POST',body:file});const result=await r.json();if(!r.ok)throw Error(result.error);dirty=true;scheduleAutosave();return result.url;}
  $('#cover').onchange=async e=>{if(!e.target.files[0])return;try{cover=await upload(e.target.files[0]);$('#cover-status').textContent='Cover image selected';}catch(e){message(e)}};
- $('#header-gallery-files').onchange=async e=>{const files=[...e.target.files];e.target.disabled=true;try{for(const file of files)headerGallery.push(await upload(file));galleryChanged();drawHeaderGallery();}catch(err){message(err)}finally{e.target.disabled=false;e.target.value=''}};
+ $('#header-gallery-files').onchange=async e=>{const files=[...e.target.files];e.target.disabled=true;try{for(const file of files)headerGallery.push({src:await upload(file),alt:'',caption:''});galleryChanged();drawHeaderGallery();}catch(err){message(err)}finally{e.target.disabled=false;e.target.value=''}};
  $('#image').addEventListener('mousedown',event=>{event.preventDefault();saveInsertionPoint();});
  $('#image').onclick=()=>{$('#insert-menu').hidden=!$('#insert-menu').hidden;};
  let galleryTarget=null, galleryImages=[];
@@ -121,14 +122,14 @@ function edit(project) {
   try {
    const payload=collect();
    if(project.id && project.published) await post(`projects/${project.id}/draft`,payload);
-   else { const result=await post('projects',{...payload,published:false}); if(!project.id&&result.id)project.id=result.id; }
+   else { const result=await post('projects',{...payload,published:false}); if(!project.id&&result.id)project.id=result.id;if(result.slug&&$('#slug').value===payload.slug)$('#slug').value=result.slug; }
    if(disposed)return;
    dirty=revision!==savingRevision;$('#save-status').textContent=dirty?'Unsaved changes':'Saved automatically';if(dirty)autosaveQueued=true;
-  } catch(e) { $('#save-status').textContent='Autosave failed'; }
+  } catch(e) { $('#save-status').textContent='Autosave failed: '+e.message; }
   finally { autosaveInFlight=false; if(autosaveQueued){autosaveQueued=false;scheduleAutosave();} }
  }
  async function save(published){clearTimeout(autosaveTimer);while(autosaveInFlight)await new Promise(resolve=>setTimeout(resolve,50));clearTimeout(autosaveTimer);if([...$('#author-rows').querySelectorAll('input[type=url]'),...$('#resource-rows').querySelectorAll('input[type=url]')].some(input=>!input.reportValidity()))return;try{if(project.published&&!published)await post(`projects/${project.id}/draft`,collect());else{await post('projects',{...collect(),published});if(published&&project.id)await post(`projects/${project.id}/clear-draft`,{});}dirty=false;window.dispatchEvent(new Event('editor-dispose'));activeEditor.destroy();list()}catch(e){$('#save-status').textContent=e.message}};
- inlineEditor(root,{cover:()=>headerGallery.length?headerGallery:(cover?[cover]:[]),hidden:()=>hideCover,toggle:()=>{hideCover=!hideCover;galleryChanged();},changed:()=>{dirty=true;scheduleAutosave();}});
+ inlineEditor(root,{cover:()=>headerGallery.length?headerGallery:(cover?[{src:cover,alt:'',caption:''}]:[]),updateGallery:(slides,redraw=true)=>{headerGallery=slides;galleryChanged();if(redraw)drawHeaderGallery();},hidden:()=>hideCover,toggle:()=>{hideCover=!hideCover;galleryChanged();},changed:()=>{dirty=true;scheduleAutosave();}});
  $('#draft').onclick=()=>save(false);$('#publish').onclick=()=>save(true);
  $('#back').onclick=()=>{if(!dirty||confirm('Leave without saving your changes?')){window.dispatchEvent(new Event('editor-dispose'));activeEditor.destroy();list()}};
  $('#preview').onclick=async()=>{try{const result=await post('project-preview',collect());const frame=document.createElement('iframe');frame.title='Published project preview';frame.setAttribute('sandbox','allow-scripts');frame.srcdoc=result.html;frame.style.cssText='width:100%;height:75vh;border:0';$('#preview-content').replaceChildren(frame);$('#preview-dialog').showModal();}catch(e){message(e)}};$('#close-preview').onclick=()=>$('#preview-dialog').close();

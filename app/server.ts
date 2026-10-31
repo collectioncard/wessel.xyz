@@ -1,4 +1,4 @@
-import { clean, projectPage, highlight, languages, normalizeAuthors, normalizeResources, normalizeGallery } from './project-page.js';
+import { clean, projectPage, highlight, languages, normalizeAuthors, normalizeResources, normalizeGallery, normalizeSlides } from './project-page.js';
 import http from 'node:http';
 import type { Project } from './types.js';
 import { DatabaseSync } from 'node:sqlite';
@@ -17,6 +17,19 @@ if (!db.prepare('PRAGMA table_info(projects)').all().some(c => c.name === 'publi
 if (!db.prepare('PRAGMA table_info(projects)').all().some(c => c.name === 'resources')) db.exec("ALTER TABLE projects ADD COLUMN resources TEXT NOT NULL DEFAULT '[]'");
 if (!db.prepare('PRAGMA table_info(projects)').all().some(c => c.name === 'gallery')) db.exec("ALTER TABLE projects ADD COLUMN gallery TEXT NOT NULL DEFAULT '[]'");
 if (!db.prepare('PRAGMA table_info(projects)').all().some(c => c.name === 'hide_cover')) db.exec("ALTER TABLE projects ADD COLUMN hide_cover INTEGER NOT NULL DEFAULT 0");
+if (!db.prepare('PRAGMA table_info(projects)').all().some(c => c.name === 'trashed_slug')) db.exec("ALTER TABLE projects ADD COLUMN trashed_slug TEXT");
+function availableSlug(requested: string, id=0): string {
+ let slug=requested, suffix=0;
+ while(db.prepare('SELECT id FROM projects WHERE slug=? AND id<>?').get(slug,id)) {
+  const tail='-'+(++suffix);slug=requested.slice(0,150-tail.length).replace(/-$/,'')+tail;
+ }
+ return slug;
+}
+function releaseSlug(id: number, slug: string) {
+ const internal=availableSlug('trash-'+id+'-'+slug,id);
+ db.prepare('UPDATE projects SET trashed_slug=COALESCE(trashed_slug,slug), slug=? WHERE id=?').run(internal,id);
+}
+for(const row of db.prepare('SELECT id,slug FROM projects WHERE deleted_at IS NOT NULL AND trashed_slug IS NULL').all()) releaseSlug(Number(row.id),String(row.slug));
 db.exec("CREATE TABLE IF NOT EXISTS project_drafts (project_id INTEGER PRIMARY KEY, payload TEXT NOT NULL, updated TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE)");
 const password = process.env.ADMIN_PASSWORD;
 const oidc = process.env.AUTHENTIK_ISSUER && process.env.OIDC_CLIENT_ID && process.env.OIDC_CLIENT_SECRET && process.env.OIDC_REDIRECT_URI ? {
@@ -42,6 +55,7 @@ const server = http.createServer(async (req,res) => { try {
  const url=new URL(req.url, 'http://localhost'); const path=url.pathname;
  if(path==='/admin'||path.startsWith('/api/')||path.startsWith('/auth/')||path==='/writeupData.json'||path.startsWith('/content/')||path.endsWith('.js')&&!/^\/assets\/[^/]+-[A-Za-z0-9_-]{8,}\.js$/.test(path)) res.setHeader('Cache-Control','no-store');
  if(path==='/inline-editor.js') return send(res,200,readFileSync('dist/public/inline-editor.js'),'text/javascript');
+ if(path==='/gallery.js') return send(res,200,readFileSync('dist/public/gallery.js'),'text/javascript');
  if (path === '/writeupData.json') { const original=JSON.parse(readFileSync('frontend/public/writeupData.json','utf8')); const added=db.prepare('SELECT * FROM projects WHERE published=1 AND deleted_at IS NULL ORDER BY updated DESC').all().map(p=>{const gallery=normalizeGallery(String(p.gallery));return {title:p.title,subtitle:p.summary,description_short:p.summary,assetFolder:'cms-'+p.slug,images:gallery.length?gallery:(p.cover?[p.cover]:[]),authors:normalizeAuthors(String(p.authors)),tags:JSON.parse(String(p.tags)),resources:normalizeResources(String(p.resources))}}); original.writeups.push(...added); return json(res,200,original); }
  if (path.startsWith('/content/')) { const p=db.prepare('SELECT * FROM projects WHERE slug=? AND published=1 AND deleted_at IS NULL').get(path.slice(9)); return p ? json(res,200,{html:renderBody(p.body)}) : json(res,404,{error:'Not found'}); }
  if (req.method==='GET' && (path==='/' || path.startsWith('/assets/') || path.startsWith('/projects/') || path==='/favicon.png')) { const file=path==='/'?'frontend/dist/index.html':join('frontend/dist',path); if(existsSync(file) && statSync(file).isFile() && !path.includes('..')) { if(/^\/assets\/[^/]+-[A-Za-z0-9_-]{8,}\.(js|css)$/.test(path)) res.setHeader('Cache-Control','public, max-age=31536000, immutable'); const ext=file.split('.').pop(); return send(res,200,readFileSync(file),{html:'text/html',js:'text/javascript',css:'text/css',png:'image/png',md:'text/plain'}[ext]||'application/octet-stream'); } }
@@ -75,18 +89,19 @@ const server = http.createServer(async (req,res) => { try {
  if(path.startsWith('/api/')) { if(!authorized(req)) return json(res,401,{error:'Please sign in'}); if(req.method!=='GET' && !sameOrigin(req)) return json(res,403,{error:'Invalid origin'});
  if(path==='/api/languages' && req.method==='GET') return json(res,200,languages);
  if(path==='/api/preview' && req.method==='POST') {const p=JSON.parse((await read(req)).toString()); return json(res,200,{html:highlight(String(p.html||''))});}
- if(path==='/api/project-preview' && req.method==='POST') {const p=JSON.parse((await read(req)).toString());return json(res,200,{html:projectPage({...p,authors:normalizeAuthors(String(p.authors)),resources:normalizeResources(String(p.resources)),gallery:normalizeGallery(String(p.gallery))},renderBody(JSON.stringify(p.body||[])),p.tags||[])});}
+ if(path==='/api/project-preview' && req.method==='POST') {const p=JSON.parse((await read(req)).toString());return json(res,200,{html:projectPage({...p,authors:normalizeAuthors(p.authors),resources:normalizeResources(p.resources),gallery:normalizeSlides(p.gallery)},renderBody(JSON.stringify(p.body||[])),p.tags||[])});}
  if(path==='/api/logout' && req.method==='POST') { const token=(req.headers.cookie||'').split('; ').find(x=>x.startsWith('session='))?.slice(8); sessions.delete(token); return send(res,200,'{}','application/json',{'Set-Cookie':'session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'}); }
  if(path==='/api/projects' && req.method==='GET') return json(res,200,db.prepare("SELECT projects.*, project_drafts.payload AS draft_payload FROM projects LEFT JOIN project_drafts ON project_drafts.project_id=projects.id WHERE projects.deleted_at IS NULL ORDER BY projects.updated DESC").all());
  if(path==='/api/trash' && req.method==='GET') return json(res,200,db.prepare('SELECT * FROM projects WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC').all());
- if(path.startsWith('/api/projects/') && req.method==='DELETE') { const id=Number(path.slice('/api/projects/'.length)); if(!Number.isInteger(id)||id<1) return json(res,400,{error:'Invalid project'}); const permanent=new URL(req.url,'http://localhost').searchParams.get('permanent')==='true'; const result=permanent?db.prepare('DELETE FROM projects WHERE id=? AND deleted_at IS NOT NULL').run(id):db.prepare("UPDATE projects SET published=0, deleted_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL").run(id); return result.changes ? json(res,200,{ok:true}) : json(res,404,{error:'Project not found'}); }
- if(path.startsWith('/api/projects/') && path.endsWith('/restore') && req.method==='POST') { const id=Number(path.slice('/api/projects/'.length,-'/restore'.length)); if(!Number.isInteger(id)||id<1) return json(res,400,{error:'Invalid project'}); const result=db.prepare('UPDATE projects SET deleted_at=NULL, updated=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NOT NULL').run(id); return result.changes ? json(res,200,{ok:true}) : json(res,404,{error:'Project not found'}); }
+ if(path.startsWith('/api/projects/') && req.method==='DELETE') { const id=Number(path.slice('/api/projects/'.length)); if(!Number.isInteger(id)||id<1) return json(res,400,{error:'Invalid project'}); const permanent=new URL(req.url,'http://localhost').searchParams.get('permanent')==='true'; const deleting=db.prepare('SELECT slug FROM projects WHERE id=? AND deleted_at IS NULL').get(id);if(!permanent&&deleting)releaseSlug(id,String(deleting.slug)); const result=permanent?db.prepare('DELETE FROM projects WHERE id=? AND deleted_at IS NOT NULL').run(id):db.prepare("UPDATE projects SET published=0, deleted_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL").run(id); return result.changes ? json(res,200,{ok:true}) : json(res,404,{error:'Project not found'}); }
+ if(path.startsWith('/api/projects/') && path.endsWith('/restore') && req.method==='POST') { const id=Number(path.slice('/api/projects/'.length,-'/restore'.length)); if(!Number.isInteger(id)||id<1) return json(res,400,{error:'Invalid project'}); const trashed=db.prepare('SELECT slug,trashed_slug FROM projects WHERE id=? AND deleted_at IS NOT NULL').get(id);if(!trashed)return json(res,404,{error:'Project not found'});const slug=availableSlug(String(trashed.trashed_slug||trashed.slug),id);const result=db.prepare('UPDATE projects SET slug=?, trashed_slug=NULL, deleted_at=NULL, updated=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NOT NULL').run(slug,id); return result.changes ? json(res,200,{ok:true}) : json(res,404,{error:'Project not found'}); }
  if(path.startsWith('/api/projects/') && path.endsWith('/clear-draft') && req.method==='POST') { const id=Number(path.slice('/api/projects/'.length,-'/clear-draft'.length)); db.prepare('DELETE FROM project_drafts WHERE project_id=?').run(id); return json(res,200,{ok:true}); }
  if(path.startsWith('/api/projects/') && path.endsWith('/draft') && req.method==='POST') { const id=Number(path.slice('/api/projects/'.length,-'/draft'.length)); const payload=JSON.parse((await read(req)).toString()); const current=db.prepare('SELECT published FROM projects WHERE id=?').get(id); if(!current?.published) return json(res,400,{error:'Only published projects can have pending drafts.'}); db.prepare('INSERT INTO project_drafts (project_id,payload,updated) VALUES (?,?,CURRENT_TIMESTAMP) ON CONFLICT(project_id) DO UPDATE SET payload=excluded.payload,updated=CURRENT_TIMESTAMP').run(id,JSON.stringify(payload)); return json(res,200,{ok:true,draft:true}); }
  if(path==='/api/projects' && req.method==='POST') {
   const p=JSON.parse((await read(req)).toString());
-  const title=String(p.title||'').trim().slice(0,150), slug=String(p.slug||'').trim();
+  const title=String(p.title||'').trim().slice(0,150); let slug=String(p.slug||'').trim();
   if(!title || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length>150) return json(res,400,{error:'A title and a lowercase, hyphenated slug are required.'});
+  slug=availableSlug(slug,Number(p.id)||0);
   if(!Array.isArray(p.body) || p.body.length>500) return json(res,400,{error:'Invalid content'});
   if(p.authors!==undefined && !Array.isArray(p.authors)) return json(res,400,{error:'Authors must be a list.'});
  if(p.resources!==undefined && !Array.isArray(p.resources)) return json(res,400,{error:'Project links must be a list.'});
@@ -98,8 +113,8 @@ const server = http.createServer(async (req,res) => { try {
   const current=p.id?db.prepare('SELECT published_at, authors, resources, gallery FROM projects WHERE id=?').get(Number(p.id)):null;
   const authors=JSON.stringify(normalizeAuthors(p.authors===undefined?current?.authors:p.authors));
   const resources=JSON.stringify(normalizeResources(p.resources===undefined?current?.resources:p.resources));
-  const gallery=JSON.stringify(normalizeGallery(p.gallery===undefined?current?.gallery:p.gallery));
-  const effectiveCover=gallery ? JSON.parse(String(gallery))[0] || cover : cover;
+  const gallery=JSON.stringify(normalizeSlides(p.gallery===undefined?String(current?.gallery||'[]'):p.gallery));
+  const effectiveCover=gallery ? JSON.parse(String(gallery))[0]?.src || cover : cover;
   const hideCover=p.hide_cover?1:0;
   const requestedDate=String(p.published_at||'');
   const publishedAt=p.published?(requestedDate||current?.published_at||new Date().toISOString().slice(0,10)):current?.published_at||null;
@@ -110,7 +125,7 @@ const server = http.createServer(async (req,res) => { try {
   } catch(e) { if(String(e).includes('UNIQUE')) return json(res,400,{error:'That URL is already in use.'}); throw e; }
   const savedId=p.id?Number(p.id):db.prepare('SELECT id FROM projects WHERE slug=?').get(slug)?.id;
   db.prepare('UPDATE projects SET hide_cover=? WHERE id=?').run(hideCover,savedId);
-  return json(res,200,{ok:true,id:savedId});
+  return json(res,200,{ok:true,id:savedId,slug});
  }
  if(path==='/api/upload' && req.method==='POST') { const buf=await read(req,10_000_000); let ext; if(buf.subarray(0,8).equals(Buffer.from('89504e470d0a1a0a','hex'))) ext='png'; else if(buf[0]===0xff && buf[1]===0xd8 && buf[2]===0xff) ext='jpg'; else if(buf.subarray(0,6).toString()==='GIF87a' || buf.subarray(0,6).toString()==='GIF89a') ext='gif'; else if(buf.subarray(0,4).toString()==='RIFF' && buf.subarray(8,12).toString()==='WEBP') ext='webp'; else return json(res,400,{error:'Use a PNG, JPEG, GIF, or WebP image.'}); const name=randomBytes(16).toString('hex')+'.'+ext; writeFileSync(join(data,'uploads',name),buf); return json(res,200,{url:'/uploads/'+name}); }
  return json(res,404,{error:'Not found'}); }

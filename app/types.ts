@@ -14,7 +14,7 @@ export interface Project {
  slug?: string;
  summary?: string;
  cover?: string;
- gallery?: string[] | string;
+ gallery?: (string | GallerySlide)[] | string;
  authors?: Author[] | string;
  resources?: Resource[] | string;
  tags?: string[] | string;
@@ -24,3 +24,4 @@ export interface Project {
  body?: string | {type: string; text?: string; html?: string; src?: string}[];
  draft_payload?: string;
 }
+export interface GallerySlide { src: string; alt: string; caption: string; }
