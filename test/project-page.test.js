@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeAuthors, normalizeResources, projectPage } from '../app/project-page.js';
+import { normalizeAuthors, normalizeResources, normalizeGallery, projectPage } from '../app/project-page.js';
 
 test('credits accept saved and legacy authors and keep profile links safe', () => {
  const authors = normalizeAuthors(JSON.stringify([
@@ -46,4 +46,13 @@ test('project links normalize safely and render as resource buttons', () => {
  assert.match(html,/GitHub repository/);
  assert.match(html,/href="https:\/\/github.com\/example\/project"/);
  assert.doesNotMatch(html,/javascript:|Unsafe/);
+});
+
+test('header gallery renders as a carousel and normalizes local images', () => {
+ const gallery=normalizeGallery(JSON.stringify(['/uploads/first.png','/uploads/second.png','javascript:alert(1)']));
+ assert.deepEqual(gallery,['/uploads/first.png','/uploads/second.png']);
+ const html=projectPage({title:'Gallery',gallery},'<p>Story</p>');
+ assert.match(html,/data-carousel="true"/);
+ assert.match(html,/src="\/uploads\/first.png"/);
+ assert.match(html,/src="\/uploads\/second.png"/);
 });

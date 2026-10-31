@@ -43,13 +43,20 @@ export function normalizeResources(value) {
  })).filter(resource => resource.resource_url);
 }
 
+export function normalizeGallery(value) {
+ let gallery = value;
+ if (typeof gallery === 'string') { try { gallery = JSON.parse(gallery); } catch { return []; } }
+ if (!Array.isArray(gallery)) return [];
+ return gallery.slice(0,20).filter(src => typeof src === 'string' && (src.startsWith('/') && !src.startsWith('//') || profileUrl(src)));
+}
+
 export function projectPage(project, body, tags=[]) {
  const authors = normalizeAuthors(project.authors);
  const resources = normalizeResources(project.resources);
+ const gallery = normalizeGallery(project.gallery);
  const date = project.published_at && /^\d{4}-\d{2}-\d{2}$/.test(project.published_at) ? `<time class="published-date" datetime="${escape(project.published_at)}">Published ${escape(new Date(`${project.published_at}T12:00:00Z`).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric',timeZone:'UTC'}))}</time>` : '';
  const credits = authors.length ? `<aside class="project-credits" aria-labelledby="credits-title"><h2 id="credits-title">Created by</h2><ul>${authors.map(author => `<li>${author.url ? `<a href="${escape(author.url)}">${escape(author.name)}</a>` : `<span>${escape(author.name)}</span>`}${author.role ? `<small>${escape(author.role)}</small>` : ''}</li>`).join('')}</ul></aside>` : '';
  const resourceLinks = resources.map(resource => `<a href="${escape(resource.resource_url)}">${escape(resource.resource_title)} <span aria-hidden="true">↗</span></a>`).join('');
- const gallery = (Array.isArray(project.gallery) ? project.gallery : []).filter(src => typeof src === 'string' && (src.startsWith('/') && !src.startsWith('//') || profileUrl(src)));
  const media = gallery.length > 1 ? `<figure class="project-media" data-carousel="true" aria-label="Project screenshots">${gallery.map((src,index) => `<div data-slide="true"><img src="${escape(src)}" alt="${escape(project.title)} — screenshot ${index+1}"></div>`).join('')}</figure>` : project.cover ? `<figure class="project-media"><img class="cover" src="${escape(project.cover)}" alt="${escape(project.title)}"></figure>` : '';
  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(project.title)} · Thomas Wessel</title><link rel="icon" href="/favicon.png" type="image/png"><link rel="stylesheet" href="/project.css"><link rel="stylesheet" href="/highlight.css"></head><body><main class="project-page"><nav class="project-nav" aria-label="Portfolio"><a class="portfolio-name" href="/">Thomas Wessel</a><a class="back-link" href="/">← All projects</a></nav><header class="project-header${authors.length ? ' has-credits' : ''}"><div class="project-heading"><h1>${escape(project.title)}</h1>${project.summary ? `<p class="project-summary">${escape(project.summary)}</p>` : ''}${date}${tags.length ? `<div class="tags" aria-label="Project topics">${tags.map(tag=>`<span>${escape(tag)}</span>`).join('')}</div>` : ''}${resourceLinks ? `<nav class="project-links" aria-label="Project links">${resourceLinks}</nav>` : ''}</div>${credits}</header>${media}<article class="project-story">${highlight(body)}</article><footer class="project-footer"><a href="/">← Back to all projects</a><span>Thomas Wessel</span></footer></main><script type="module" src="/carousels.js"></script></body></html>`;
 }
