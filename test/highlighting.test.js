@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { highlight, clean, markdown } from '../app/project-page.js';
+import { highlight, clean, markdown } from '../dist/app/project-page.js';
 test('highlights explicitly selected languages and preserves safe code',()=>{
  const js=highlight('<pre data-language="javascript"><code>const answer = 42;</code></pre>');
  assert.match(js,/hljs-keyword/);assert.match(js,/JavaScript/);assert.match(js,/hljs-number/);

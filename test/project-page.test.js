@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeAuthors, normalizeResources, normalizeGallery, projectPage } from '../app/project-page.js';
+import { normalizeAuthors, normalizeResources, normalizeGallery, projectPage } from '../dist/app/project-page.js';
 
 test('credits accept saved and legacy authors and keep profile links safe', () => {
  const authors = normalizeAuthors(JSON.stringify([

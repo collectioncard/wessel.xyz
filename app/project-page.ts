@@ -1,4 +1,5 @@
 import hljs from 'highlight.js';
+import type { Author, Resource, Project } from './types.js';
 import { decodeHTML } from 'entities';
 import sanitizeHtml from 'sanitize-html';
 import { marked } from 'marked';
@@ -22,7 +23,7 @@ function profileUrl(value) {
  try { const url = new URL(value); return ['http:', 'https:'].includes(url.protocol) ? url.href : ''; } catch { return ''; }
 }
 
-export function normalizeAuthors(value) {
+export function normalizeAuthors(value: Author[] | string | undefined): Author[] {
  let authors = value;
  if (typeof authors === 'string') { try { authors = JSON.parse(authors); } catch { return []; } }
  if (!Array.isArray(authors)) return [];
@@ -33,7 +34,7 @@ export function normalizeAuthors(value) {
  }));
 }
 
-export function normalizeResources(value) {
+export function normalizeResources(value: Resource[] | string | undefined): Resource[] {
  let resources = value;
  if (typeof resources === 'string') { try { resources = JSON.parse(resources); } catch { return []; } }
  if (!Array.isArray(resources)) return [];
@@ -43,14 +44,14 @@ export function normalizeResources(value) {
  })).filter(resource => resource.resource_url);
 }
 
-export function normalizeGallery(value) {
+export function normalizeGallery(value: string[] | string | undefined): string[] {
  let gallery = value;
  if (typeof gallery === 'string') { try { gallery = JSON.parse(gallery); } catch { return []; } }
  if (!Array.isArray(gallery)) return [];
  return gallery.slice(0,20).filter(src => typeof src === 'string' && (src.startsWith('/') && !src.startsWith('//') || profileUrl(src)));
 }
 
-export function projectPage(project, body, tags=[]) {
+export function projectPage(project: Project, body: string, tags: string[]=[]) {
  const authors = normalizeAuthors(project.authors);
  const resources = normalizeResources(project.resources);
  const gallery = normalizeGallery(project.gallery);

@@ -1,7 +1,7 @@
 // Enhance semantic galleries without making their images depend on JavaScript.
 export function enhanceCarousels(root=document) {
 for (const gallery of root.querySelectorAll('figure[data-carousel]')) {
- const slides=[...gallery.querySelectorAll(':scope > div[data-slide]')];
+ const slides=[...gallery.querySelectorAll<HTMLElement>(':scope > div[data-slide]')];
  if(slides.length<2)continue;
  let current=0;
  const controls=document.createElement('nav'); controls.className='carousel-controls';

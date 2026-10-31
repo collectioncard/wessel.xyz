@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const source = readFileSync(new URL('../public/admin.js', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../public/admin.ts', import.meta.url), 'utf8');
 
 test('editor preserves the insertion point before opening insertion controls', () => {
   assert.match(source, /const saveInsertionPoint/);

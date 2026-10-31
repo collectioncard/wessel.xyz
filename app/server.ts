@@ -1,5 +1,6 @@
 import { clean, projectPage, highlight, languages, normalizeAuthors, normalizeResources, normalizeGallery } from './project-page.js';
 import http from 'node:http';
+import type { Project } from './types.js';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, readFileSync, writeFileSync, existsSync, statSync } from 'node:fs';
 import { resolve, join } from 'node:path';
@@ -30,18 +31,18 @@ const escape = s => String(s ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;
 const page = (title, content) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(title)} · Thomas Wessel</title><link rel="stylesheet" href="/style.css"></head><body>${content}</body></html>`;
 const layout = content => `<main class="shell"><nav><a class="brand" href="/">Thomas Wessel<span>.</span></a><a href="/">Projects</a></nav>${content}<footer>Made with curiosity. <a href="/admin">Admin</a></footer></main>`;
 const image = (src, cls = '') => src && /^\/uploads\/[a-f0-9]+\.(png|jpg|webp|gif)$/.test(src) ? `<img class="${cls}" src="${escape(src)}" alt="" loading="lazy">` : '';
-function renderBody(raw) { let blocks; try { blocks = JSON.parse(raw); } catch { return ''; } if (!Array.isArray(blocks)) return ''; return blocks.map(b => { if (b.type === 'html') return clean(b.html || ''); const text = escape(b.text || ''); if (b.type === 'image') return image(b.src, 'article-image'); if (b.type === 'heading') return `<h2>${text}</h2>`; if (b.type === 'quote') return `<blockquote>${text}</blockquote>`; if (b.type === 'code') return `<pre><code>${text}</code></pre>`; return `<p>${text.replaceAll('\n','<br>')}</p>`; }).join(''); }
+function renderBody(raw) { let blocks; try { blocks = JSON.parse(String(raw)); } catch { return ''; } if (!Array.isArray(blocks)) return ''; return blocks.map(b => { if (b.type === 'html') return clean(b.html || ''); const text = escape(b.text || ''); if (b.type === 'image') return image(b.src, 'article-image'); if (b.type === 'heading') return `<h2>${text}</h2>`; if (b.type === 'quote') return `<blockquote>${text}</blockquote>`; if (b.type === 'code') return `<pre><code>${text}</code></pre>`; return `<p>${text.replaceAll('\n','<br>')}</p>`; }).join(''); }
 const send = (res, status, body, type='text/html; charset=utf-8', headers={}) => { res.writeHead(status, {'Content-Type':type,'X-Content-Type-Options':'nosniff','Referrer-Policy':'same-origin','Cache-Control':status>=400?'no-store':(res.getHeader('Cache-Control')||'no-cache, must-revalidate'),...headers}); res.end(body); };
 const json = (res, status, data) => send(res,status,JSON.stringify(data),'application/json');
 async function read(req, limit=2_000_000) { let chunks=[], size=0; for await (const chunk of req) { size += chunk.length; if(size > limit) throw Error('Request too large'); chunks.push(chunk); } return Buffer.concat(chunks); }
 function authorized(req) { const token = (req.headers.cookie || '').split('; ').find(x => x.startsWith('session='))?.slice(8); const session = sessions.get(token); if (!session || session.expires < Date.now()) { sessions.delete(token); return false; } return true; }
 function sameOrigin(req) { const origin=req.headers.origin; if (!origin) return false; try { return new URL(origin).host === req.headers.host; } catch { return false; } }
-const staticFiles = {'/highlight.css':['node_modules/highlight.js/styles/github-dark.css','text/css'], '/project.css':['public/project.css','text/css'], '/carousels.js':['public/carousels.js','text/javascript'], '/medium-editor.js':['node_modules/medium-editor/dist/js/medium-editor.js','text/javascript'], '/medium-editor.css':['node_modules/medium-editor/dist/css/medium-editor.css','text/css'], '/medium-theme.css':['node_modules/medium-editor/dist/css/themes/default.css','text/css'], '/style.css':['public/style.css','text/css'], '/admin.js':['public/admin.js','text/javascript'], '/admin-enhancements.js':['public/admin-enhancements.js','text/javascript']};
+const staticFiles = {'/highlight.css':['node_modules/highlight.js/styles/github-dark.css','text/css'], '/project.css':['public/project.css','text/css'], '/carousels.js':['dist/public/carousels.js','text/javascript'], '/medium-editor.js':['node_modules/medium-editor/dist/js/medium-editor.js','text/javascript'], '/medium-editor.css':['node_modules/medium-editor/dist/css/medium-editor.css','text/css'], '/medium-theme.css':['node_modules/medium-editor/dist/css/themes/default.css','text/css'], '/style.css':['public/style.css','text/css'], '/admin.js':['dist/public/admin.js','text/javascript'], '/admin-enhancements.js':['dist/public/admin-enhancements.js','text/javascript']};
 const server = http.createServer(async (req,res) => { try {
  const url=new URL(req.url, 'http://localhost'); const path=url.pathname;
  if(path==='/admin'||path.startsWith('/api/')||path.startsWith('/auth/')||path==='/writeupData.json'||path.startsWith('/content/')||path.endsWith('.js')&&!/^\/assets\/[^/]+-[A-Za-z0-9_-]{8,}\.js$/.test(path)) res.setHeader('Cache-Control','no-store');
- if(path==='/inline-editor.js') return send(res,200,readFileSync('public/inline-editor.js'),'text/javascript');
- if (path === '/writeupData.json') { const original=JSON.parse(readFileSync('frontend/public/writeupData.json','utf8')); const added=db.prepare('SELECT * FROM projects WHERE published=1 AND deleted_at IS NULL ORDER BY updated DESC').all().map(p=>{const gallery=normalizeGallery(p.gallery);return {title:p.title,subtitle:p.summary,description_short:p.summary,assetFolder:'cms-'+p.slug,images:gallery.length?gallery:(p.cover?[p.cover]:[]),authors:normalizeAuthors(p.authors),tags:JSON.parse(p.tags),resources:normalizeResources(p.resources)}}); original.writeups.push(...added); return json(res,200,original); }
+ if(path==='/inline-editor.js') return send(res,200,readFileSync('dist/public/inline-editor.js'),'text/javascript');
+ if (path === '/writeupData.json') { const original=JSON.parse(readFileSync('frontend/public/writeupData.json','utf8')); const added=db.prepare('SELECT * FROM projects WHERE published=1 AND deleted_at IS NULL ORDER BY updated DESC').all().map(p=>{const gallery=normalizeGallery(String(p.gallery));return {title:p.title,subtitle:p.summary,description_short:p.summary,assetFolder:'cms-'+p.slug,images:gallery.length?gallery:(p.cover?[p.cover]:[]),authors:normalizeAuthors(String(p.authors)),tags:JSON.parse(String(p.tags)),resources:normalizeResources(String(p.resources))}}); original.writeups.push(...added); return json(res,200,original); }
  if (path.startsWith('/content/')) { const p=db.prepare('SELECT * FROM projects WHERE slug=? AND published=1 AND deleted_at IS NULL').get(path.slice(9)); return p ? json(res,200,{html:renderBody(p.body)}) : json(res,404,{error:'Not found'}); }
  if (req.method==='GET' && (path==='/' || path.startsWith('/assets/') || path.startsWith('/projects/') || path==='/favicon.png')) { const file=path==='/'?'frontend/dist/index.html':join('frontend/dist',path); if(existsSync(file) && statSync(file).isFile() && !path.includes('..')) { if(/^\/assets\/[^/]+-[A-Za-z0-9_-]{8,}\.(js|css)$/.test(path)) res.setHeader('Cache-Control','public, max-age=31536000, immutable'); const ext=file.split('.').pop(); return send(res,200,readFileSync(file),{html:'text/html',js:'text/javascript',css:'text/css',png:'image/png',md:'text/plain'}[ext]||'application/octet-stream'); } }
 
@@ -52,7 +53,7 @@ const server = http.createServer(async (req,res) => { try {
  if(req.method==='GET' && path.startsWith('/projects/')) {
  const slug=decodeURIComponent(path.slice(10));
  const p=db.prepare('SELECT * FROM projects WHERE slug=? AND published=1 AND deleted_at IS NULL').get(slug);
- if(p) return send(res,200,projectPage(p,renderBody(p.body),JSON.parse(p.tags)));
+ if(p) return send(res,200,projectPage(p as unknown as Project,renderBody(p.body),JSON.parse(String(p.tags))));
  return send(res,404,'Project not found');
  }
  if(req.method==='GET' && path==='/admin') return send(res,200,page('Admin',`<main class="admin-shell"><a href="/" class="brand">Thomas Wessel<span>.</span></a><div id="app"></div></main><link rel="stylesheet" href="/highlight.css"><link rel="stylesheet" href="/medium-editor.css"><link rel="stylesheet" href="/medium-theme.css"><script src="/medium-editor.js"></script><script type="module" src="/admin.js"></script>`));
@@ -74,7 +75,7 @@ const server = http.createServer(async (req,res) => { try {
  if(path.startsWith('/api/')) { if(!authorized(req)) return json(res,401,{error:'Please sign in'}); if(req.method!=='GET' && !sameOrigin(req)) return json(res,403,{error:'Invalid origin'});
  if(path==='/api/languages' && req.method==='GET') return json(res,200,languages);
  if(path==='/api/preview' && req.method==='POST') {const p=JSON.parse((await read(req)).toString()); return json(res,200,{html:highlight(String(p.html||''))});}
- if(path==='/api/project-preview' && req.method==='POST') {const p=JSON.parse((await read(req)).toString());return json(res,200,{html:projectPage({...p,authors:normalizeAuthors(p.authors),resources:normalizeResources(p.resources),gallery:normalizeGallery(p.gallery)},renderBody(JSON.stringify(p.body||[])),p.tags||[])});}
+ if(path==='/api/project-preview' && req.method==='POST') {const p=JSON.parse((await read(req)).toString());return json(res,200,{html:projectPage({...p,authors:normalizeAuthors(String(p.authors)),resources:normalizeResources(String(p.resources)),gallery:normalizeGallery(String(p.gallery))},renderBody(JSON.stringify(p.body||[])),p.tags||[])});}
  if(path==='/api/logout' && req.method==='POST') { const token=(req.headers.cookie||'').split('; ').find(x=>x.startsWith('session='))?.slice(8); sessions.delete(token); return send(res,200,'{}','application/json',{'Set-Cookie':'session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'}); }
  if(path==='/api/projects' && req.method==='GET') return json(res,200,db.prepare("SELECT projects.*, project_drafts.payload AS draft_payload FROM projects LEFT JOIN project_drafts ON project_drafts.project_id=projects.id WHERE projects.deleted_at IS NULL ORDER BY projects.updated DESC").all());
  if(path==='/api/trash' && req.method==='GET') return json(res,200,db.prepare('SELECT * FROM projects WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC').all());
@@ -98,11 +99,11 @@ const server = http.createServer(async (req,res) => { try {
   const authors=JSON.stringify(normalizeAuthors(p.authors===undefined?current?.authors:p.authors));
   const resources=JSON.stringify(normalizeResources(p.resources===undefined?current?.resources:p.resources));
   const gallery=JSON.stringify(normalizeGallery(p.gallery===undefined?current?.gallery:p.gallery));
-  const effectiveCover=gallery ? JSON.parse(gallery)[0] || cover : cover;
+  const effectiveCover=gallery ? JSON.parse(String(gallery))[0] || cover : cover;
   const hideCover=p.hide_cover?1:0;
   const requestedDate=String(p.published_at||'');
   const publishedAt=p.published?(requestedDate||current?.published_at||new Date().toISOString().slice(0,10)):current?.published_at||null;
-  if(publishedAt && !/^\d{4}-\d{2}-\d{2}$/.test(publishedAt)) return json(res,400,{error:'Published date must be YYYY-MM-DD.'});
+  if(publishedAt && !/^\d{4}-\d{2}-\d{2}$/.test(String(publishedAt))) return json(res,400,{error:'Published date must be YYYY-MM-DD.'});
   try {
    if(p.id) db.prepare('UPDATE projects SET title=?, slug=?, summary=?, cover=?, body=?, published=?, tags=?, authors=?, resources=?, gallery=?, published_at=?, updated=CURRENT_TIMESTAMP WHERE id=?').run(title,slug,String(p.summary||'').slice(0,500),effectiveCover,body,p.published?1:0,tags,authors,resources,gallery,publishedAt,Number(p.id));
    else db.prepare('INSERT INTO projects (title,slug,summary,cover,body,published,tags,authors,resources,gallery,published_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(title,slug,String(p.summary||'').slice(0,500),effectiveCover,body,p.published?1:0,tags,authors,resources,gallery,publishedAt);
@@ -115,4 +116,4 @@ const server = http.createServer(async (req,res) => { try {
  return json(res,404,{error:'Not found'}); }
  return send(res,404,'Not found');
  } catch(e) { console.error(e); return json(res,500,{error:'Something went wrong.'}); } });
-server.listen(Number(process.env.PORT || 3000), '0.0.0.0',()=>console.log(`Portfolio is running on ${server.address().port}`));
+server.listen(Number(process.env.PORT || 3000), '0.0.0.0',()=>console.log(`Portfolio is running on ${(server.address() as import('node:net').AddressInfo).port}`));

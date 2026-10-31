@@ -3,8 +3,8 @@ const escapeText = value => String(value ?? '').replaceAll('&','&amp;').replaceA
 
 const nativeFetch = window.fetch.bind(window);
 window.fetch = async (input, init = {}) => {
-  const requestUrl = typeof input === 'string' ? input : input.url;
-  const method = init.method || (typeof input === 'object' ? input.method : 'GET');
+  const requestUrl = typeof input === 'string' ? input : input instanceof URL ? input.pathname : input.url;
+  const method = init.method || (input instanceof Request ? input.method : 'GET');
   if (requestUrl === '/api/projects' && method === 'GET') {
     const response = await nativeFetch(input, init);
     const projects = await response.clone().json();
@@ -19,7 +19,7 @@ window.fetch = async (input, init = {}) => {
     return new Response(JSON.stringify(projects), { status: response.status, headers: response.headers });
   }
   if (requestUrl === '/api/projects' && method === 'POST' && init.body) {
-    const payload = JSON.parse(init.body);
+    const payload = JSON.parse(String(init.body));
     const original = originalProjects.get(payload.id);
     if (original?.published && !payload.published) {
       return nativeFetch(`/api/projects/${payload.id}/draft`, { ...init, body: JSON.stringify(payload) });
@@ -62,8 +62,8 @@ function showDiff(project) {
 }
 
 const observer = new MutationObserver(() => {
-  document.querySelectorAll('.project-row-wrap').forEach(row => {
-    const button = row.querySelector('[data-id]');
+  document.querySelectorAll<HTMLElement>('.project-row-wrap').forEach(row => {
+    const button = row.querySelector<HTMLElement>('[data-id]');
     if (!button || row.dataset.enhanced) return;
     const project = originalProjects.get(Number(button.dataset.id));
     if (!project?.draft_payload) return;

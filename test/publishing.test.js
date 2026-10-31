@@ -7,7 +7,7 @@ import { join } from 'node:path';
 
 test('rich projects preserve tags and carousels and keep drafts private',async()=>{
  const data=mkdtempSync(join(tmpdir(),'portfolio-'));
- const child=spawn(process.execPath,['app/server.js'],{env:{...process.env,DATA_DIR:data,PORT:'0',ADMIN_PASSWORD:'integration-test-password'},stdio:['ignore','pipe','pipe']});
+ const child=spawn(process.execPath,['dist/app/server.js'],{env:{...process.env,DATA_DIR:data,PORT:'0',ADMIN_PASSWORD:'integration-test-password'},stdio:['ignore','pipe','pipe']});
  let startupError=''; child.stderr.on('data',chunk=>{startupError+=chunk.toString()});
  try {
  const base=await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error(`Server did not start: ${startupError}`)),3000);child.stdout.once('data',chunk=>{clearTimeout(timer);const port=/on (\d+)/.exec(chunk.toString())?.[1];port?resolve(`http://localhost:${port}`):reject(Error(`Unexpected startup output: ${chunk}`))});child.once('exit',code=>{clearTimeout(timer);reject(Error(`Server exited ${code}: ${startupError}`))});child.once('error',reject)});

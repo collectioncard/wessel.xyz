@@ -4,7 +4,7 @@ A self-hosted portfolio and small browser-based project editor. The public portf
 
 ## Run locally
 
-Requires Node.js 22.13 or newer. Run `npm ci` and `npm --prefix frontend ci`, then `npm --prefix frontend run build`.
+Requires Node.js 22.13 or newer. Run `npm ci` and `npm --prefix frontend ci`, then `npm run build`. The server and editor sources are TypeScript; compiled JavaScript lives in the ignored `dist/` directory. Use `npm run typecheck` to check them without building.
 
 ```sh
 ADMIN_PASSWORD='choose-a-long-unique-password' npm start
