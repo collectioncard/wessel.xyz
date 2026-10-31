@@ -3,13 +3,10 @@ import './App.css';
 import ProjectThumbnail from './components/project-thumbs/projectThumbnail';
 import Masonry, { ResponsiveMasonry } from "react-responsive-masonry";
 import { Project, ProjectData } from './scripts/ProjectData';
-import ProjectModal from './components/project-modal/ProjectModal';
+
 
 function App() {
     const [projects, setProjects] = useState<Project[]>([]);
-    const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-
     useEffect(() => {
         const fetchProjects = async () => {
             const fetchedProjects = await ProjectData.getProjects();
@@ -20,23 +17,16 @@ function App() {
         fetchProjects();
     }, []);
 
-    const openModal = (project: Project) => {
-        setSelectedProject(project);
-        setIsModalOpen(true);
-    };
-
-    const closeModal = () => {
-        setSelectedProject(null);
-        setIsModalOpen(false);
-    };
-
     return (
         <>
             <div className="mainContainer">
                 <header>
                     <h1>Thomas Wessel</h1>
-                    <h2>I make seemingly unrelated stuff that usually ends up being pretty neat</h2>
-                    <h3><a href="https://docs.google.com/document/d/158I-peZDIZNFvw30WkYq4zKa8BadVcCwm4fJmsCpsjw/export?format=pdf">Download my resume here</a></h3>
+                    <p className="introText">I make seemingly unrelated stuff that usually ends up being pretty neat</p>
+                    <nav className="profileLinks" aria-label="Résumé and profiles">
+                        <a href="https://docs.google.com/document/d/158I-peZDIZNFvw30WkYq4zKa8BadVcCwm4fJmsCpsjw/export?format=pdf" aria-label="Download my résumé">Résumé</a>
+                        <a href="https://github.com/collectioncard">GitHub</a>
+                    </nav>
                 </header>
                 <div className="projectHeader">
                     <p>Take a look at some of the projects that I've worked on</p>
@@ -50,17 +40,13 @@ function App() {
                             <ProjectThumbnail
                                 key={project.id}
                                 {...project}
-                                onClick={() => openModal(project)}
+                                onClick={() => { window.location.href = '/projects/' + (project.assetFolder.startsWith('cms-') ? project.assetFolder.slice(4) : project.assetFolder); }}
                             />
                         ))}
                     </Masonry>
                 </ResponsiveMasonry>
             </div>
-            <ProjectModal
-                isOpen={isModalOpen}
-                onRequestClose={closeModal}
-                project={selectedProject}
-            />
+
         </>
     );
 }

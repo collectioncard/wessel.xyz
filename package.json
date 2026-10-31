@@ -1,0 +1,1 @@
+{"name":"wessel-portfolio","version":"1.0.0","private":true,"type":"module","engines":{"node":">=22.13"},"scripts":{"start":"node app/server.js","test":"node --test"},"dependencies":{"entities":"^4.5.0","highlight.js":"^11.11.1","marked":"^15.0.12","medium-editor":"^5.23.3","sanitize-html":"^2.17.2"}}

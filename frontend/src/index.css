@@ -1,5 +1,13 @@
+@font-face {
+  font-family: 'Nunito Sans';
+  src: url('/assets/fonts/NunitoSans-Variable.woff2') format('woff2');
+  font-weight: 200 1000;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Nunito Sans', system-ui, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 

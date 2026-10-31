@@ -22,11 +22,18 @@ const responsive = {
 };
 
 const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onRequestClose, project }) => {
+    const [htmlContent, setHtmlContent] = useState('');
     const [markdownContent, setMarkdownContent] = useState<string>('');
 
     useEffect(() => {
         if (isOpen && project) {
             document.body.style.overflow = 'hidden';
+            setHtmlContent('');
+            setMarkdownContent('');
+            if (project.assetFolder.startsWith('cms-')) {
+                fetch('/content/' + project.assetFolder.slice(4)).then(r => r.json()).then(data => setHtmlContent(data.html || ''));
+                return;
+            }
             const filePath = `projects/${project.assetFolder}/writeup.md`;
             fetch(filePath)
                 .then(response => response.text())
@@ -79,7 +86,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onRequestClose, pro
                             className={"showcaseImage"}
                             key={index}
                             src={
-                                image.startsWith('http')
+                                (image.startsWith('http') || image.startsWith('/'))
                                     ? image
                                     : `projects/${project.assetFolder}/img/${image}`
 
@@ -90,7 +97,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onRequestClose, pro
                 </Carousel>
             </div>
             <div className="markdownContainer">
-                <MarkdownRenderer content={markdownContent} />
+                {htmlContent ? <div dangerouslySetInnerHTML={{ __html: htmlContent }} /> : <MarkdownRenderer content={markdownContent} />}
             </div>
             <button onClick={onRequestClose}>Close</button>
         </Modal>

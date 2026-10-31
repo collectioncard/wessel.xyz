@@ -1,23 +1,108 @@
+@font-face {
+  font-family: 'Lilita One';
+  src: url('/assets/fonts/LilitaOne-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 #root {
+  width: 100%;
   max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
 }
 
+#root,
+#root * {
+  box-sizing: border-box;
+}
+
 .projectHeader {
-  padding: 2em;
+  padding: 2rem 0 1.25rem;
 }
 
 
 .mainContainer {
   background-color: #fff;
-  max-width: 960px;
+  max-width: 1040px;
   margin: 20px auto;
   padding: 40px;
   border-radius: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   z-index: 20;
+}
+
+.mainContainer header h1 {
+  margin: 0.4em 0 0.35em;
+  font-family: 'Lilita One', 'Arial Rounded MT Bold', sans-serif;
+  font-size: clamp(2.5rem, 7vw, 4.25rem);
+  font-weight: 400;
+  letter-spacing: -0.025em;
+}
+
+.introText {
+  max-width: 580px;
+  margin: 0 auto;
+  font-size: 1.125rem;
+  line-height: 1.65;
+  color: #4b4b4b;
+  text-wrap: balance;
+}
+
+.profileLinks {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 1.5rem 0 0.75rem;
+}
+
+.profileLinks a {
+  display: inline-block;
+  min-width: 120px;
+  padding: 9px 14px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #3d5b73;
+  text-decoration: none;
+}
+
+.profileLinks a:hover {
+  color: #233e53;
+  background-color: #f2f5f7;
+}
+
+.profileLinks a:focus-visible {
+  outline: 2px solid #3d5b73;
+  outline-offset: 4px;
+}
+
+@media (max-width: 600px) {
+  #root {
+    padding: 12px;
+  }
+
+  .mainContainer {
+    margin: 8px auto;
+    padding: 24px 14px;
+  }
+
+  .mainContainer header {
+    padding: 0 8px;
+  }
+
+  .introText {
+    font-size: 1.0625rem;
+  }
+
+  .projectHeader {
+    padding: 1.5rem 10px 0.75rem;
+  }
 }
 
 .newNoteButton {
