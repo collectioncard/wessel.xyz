@@ -23,7 +23,7 @@ function edit(project) {
  authorSettings.className='authors-editor';
  authorSettings.innerHTML='<legend>Authors & collaborators</legend><p>Credit everyone who worked on this project, including yourself. Roles and profile links are optional.</p><div id="author-rows"></div><button id="add-author" class="secondary" type="button">+ Add author</button>';
  $('#settings-dialog').insertBefore(authorSettings,$('#settings-close'));
- const authorsChanged=()=>{dirty=true;$('#save-status').textContent='Unsaved changes';};
+ const authorsChanged=()=>{dirty=true;$('#save-status').textContent='Unsaved changes';scheduleAutosave();};
  const drawAuthors=()=>{
   $('#author-rows').innerHTML=authors.map((author,index)=>`<div class="author-row"><label>Name<input data-author-name="${index}" value="${esc(author.name)}" maxlength="120" placeholder="Full name"></label><label>Role (optional)<input data-author-role="${index}" value="${esc(author.role||'')}" maxlength="120" placeholder="e.g. Game design"></label><label>Profile link (optional)<input type="url" data-author-url="${index}" value="${esc(author.url||author.github||'')}" maxlength="2048" placeholder="https://github.com/…"></label><button class="text-button" type="button" data-remove-author="${index}" aria-label="Remove author ${esc(author.name||String(index+1))}">Remove author</button></div>`).join('');
   for(const field of ['name','role','url']) $('#author-rows').querySelectorAll(`[data-author-${field}]`).forEach(input=>input.oninput=()=>{authors[Number(input.getAttribute(`data-author-${field}`))][field]=input.value;authorsChanged();});
@@ -35,7 +35,7 @@ function edit(project) {
  resourceSettings.className='resources-editor';
  resourceSettings.innerHTML='<legend>Project links</legend><p>Add buttons such as a GitHub repository, live demo, or itch.io page.</p><div id="resource-rows"></div><button id="add-resource" class="secondary" type="button">+ Add link</button>';
  $('#settings-dialog').insertBefore(resourceSettings,$('#settings-close'));
- const resourcesChanged=()=>{dirty=true;$('#save-status').textContent='Unsaved changes';};
+ const resourcesChanged=()=>{dirty=true;$('#save-status').textContent='Unsaved changes';scheduleAutosave();};
  const drawResources=()=>{
   $('#resource-rows').innerHTML=resources.map((resource,index)=>`<div class="resource-row"><label>Link label<input data-resource-title="${index}" value="${esc(resource.resource_title||'')}" maxlength="120" placeholder="GitHub repository"></label><label>URL<input type="url" data-resource-url="${index}" value="${esc(resource.resource_url||'')}" maxlength="2048" placeholder="https://github.com/…"></label><button class="text-button" type="button" data-remove-resource="${index}" aria-label="Remove ${esc(resource.resource_title||String(index+1))}">Remove</button></div>`).join('');
   for(const field of ['title','url']) $('#resource-rows').querySelectorAll(`[data-resource-${field}]`).forEach(input=>input.oninput=()=>{resources[Number(input.getAttribute(`data-resource-${field}`))][field==='title'?'resource_title':'resource_url']=input.value;resourcesChanged();});
@@ -47,7 +47,7 @@ function edit(project) {
  gallerySettings.className='resources-editor gallery-editor';
  gallerySettings.innerHTML='<legend>Project header gallery</legend><p>The first image is used on the homepage card. Add more images to turn the project header into a carousel.</p><input id="header-gallery-files" type="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple><div id="header-gallery-rows"></div>';
  $('#settings-dialog').insertBefore(gallerySettings,$('#settings-close'));
- const galleryChanged=()=>{dirty=true;$('#save-status').textContent='Unsaved changes';};
+ const galleryChanged=()=>{dirty=true;$('#save-status').textContent='Unsaved changes';scheduleAutosave();};
  const drawHeaderGallery=()=>{
   $('#header-gallery-rows').innerHTML=headerGallery.map((src,index)=>`<div class="header-gallery-row"><img src="${esc(src)}" alt=""><span>${index===0?'Homepage image':'Carousel image '+(index+1)}</span><button class="text-button" type="button" data-remove-header-gallery="${index}">Remove</button></div>`).join('');
   $('#header-gallery-rows').querySelectorAll('[data-remove-header-gallery]').forEach(button=>button.onclick=()=>{headerGallery.splice(Number(button.dataset.removeHeaderGallery),1);galleryChanged();drawHeaderGallery();});
@@ -75,12 +75,14 @@ function edit(project) {
   }
  };
  activeEditor=new MediumEditor('#story',{placeholder:{text:'Tell your story…',hideOnClick:false},toolbar:{buttons:['bold','italic','anchor','h2','h3','quote','unorderedlist','orderedlist'],diffTop:-10},anchor:{linkValidation:true},paste:{forcePlainText:false,cleanPastedHTML:true}});
- activeEditor.subscribe('editableInput',()=>{dirty=true;$('#save-status').textContent='Unsaved changes';});
+ activeEditor.subscribe('editableInput',()=>{dirty=true;$('#save-status').textContent='Unsaved changes';scheduleAutosave();});
  $('#story').addEventListener('keyup',saveInsertionPoint);
  $('#story').addEventListener('mouseup',saveInsertionPoint);
- $('#title').oninput=()=>{dirty=true;if(!project.id)$('#slug').value=$('#title').value.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');};$('#summary').oninput=()=>dirty=true;
+ $('#title').oninput=()=>{dirty=true;if(!project.id)$('#slug').value=$('#title').value.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');scheduleAutosave();};$('#summary').oninput=()=>{dirty=true;scheduleAutosave();};
  $('#settings').onclick=()=>$('#settings-dialog').showModal();$('#settings-close').onclick=()=>$('#settings-dialog').close();
- async function upload(file){const r=await fetch('/api/upload',{method:'POST',body:file});const result=await r.json();if(!r.ok)throw Error(result.error);dirty=true;return result.url;}
+ let autosaveTimer=null, autosaveInFlight=false, autosaveQueued=false;
+ function scheduleAutosave(){clearTimeout(autosaveTimer);autosaveTimer=setTimeout(autosave,1200);}
+ async function upload(file){const r=await fetch('/api/upload',{method:'POST',body:file});const result=await r.json();if(!r.ok)throw Error(result.error);dirty=true;scheduleAutosave();return result.url;}
  $('#cover').onchange=async e=>{if(!e.target.files[0])return;try{cover=await upload(e.target.files[0]);$('#cover-status').textContent='Cover image selected';}catch(e){message(e)}};
  $('#header-gallery-files').onchange=async e=>{const files=[...e.target.files];e.target.disabled=true;try{for(const file of files)headerGallery.push(await upload(file));galleryChanged();drawHeaderGallery();}catch(err){message(err)}finally{e.target.disabled=false;e.target.value=''}};
  $('#image').addEventListener('mousedown',event=>{event.preventDefault();saveInsertionPoint();});
@@ -107,7 +109,19 @@ function edit(project) {
  markCode();
  markGalleries();$('#image-file').onchange=async e=>{if(!e.target.files[0])return;try{const src=await upload(e.target.files[0]);restoreInsertionPoint();activeEditor.pasteHTML(`<img src="${esc(src)}" alt=""><p><br></p>`);}catch(e){message(e)}};
  const collect=()=>({id:project.id,title:$('#title').value,summary:$('#summary').value,slug:$('#slug').value,cover, gallery:headerGallery, published_at:$('#published-date').value,tags:$('#tags').value.split(',').map(t=>t.trim()).filter(Boolean),authors:authors.filter(author=>author.name?.trim()).map(author=>({name:author.name.trim(),role:(author.role||'').trim(),url:(author.url||author.github||'').trim()})),resources:resources.filter(resource=>resource.resource_title?.trim()&&resource.resource_url?.trim()).map(resource=>({resource_title:resource.resource_title.trim(),resource_url:resource.resource_url.trim()})),body:[{type:'html',html:$('#story').innerHTML}]});
- async function save(published){if([...$('#author-rows').querySelectorAll('input[type=url]')].some(input=>!input.reportValidity()))return;try{await post('projects',{...collect(),published});dirty=false;activeEditor.destroy();list()}catch(e){$('#save-status').textContent=e.message}};
+ async function autosave(){
+  if(!dirty||!$('#title').value.trim()||!$('#slug').value.trim())return;
+  if(autosaveInFlight){autosaveQueued=true;return;}
+  autosaveInFlight=true;
+  try {
+   const payload=collect();
+   if(project.id && project.published) await post(`projects/${project.id}/draft`,payload);
+   else { const result=await post('projects',{...payload,published:false}); if(!project.id&&result.id)project.id=result.id; }
+   dirty=false;$('#save-status').textContent='Saved automatically';
+  } catch(e) { $('#save-status').textContent='Autosave failed'; }
+  finally { autosaveInFlight=false; if(autosaveQueued){autosaveQueued=false;scheduleAutosave();} }
+ }
+ async function save(published){clearTimeout(autosaveTimer);if([...$('#author-rows').querySelectorAll('input[type=url]'),...$('#resource-rows').querySelectorAll('input[type=url]')].some(input=>!input.reportValidity()))return;try{await post('projects',{...collect(),published});dirty=false;activeEditor.destroy();list()}catch(e){$('#save-status').textContent=e.message}};
  $('#draft').onclick=()=>save(false);$('#publish').onclick=()=>save(true);
  $('#back').onclick=()=>{if(!dirty||confirm('Leave without saving your changes?')){activeEditor.destroy();list()}};
  $('#preview').onclick=async()=>{const p=collect();$('#preview-content').innerHTML=`<h1>${esc(p.title)}</h1><p>${esc(p.summary)}</p>${p.authors.length?`<div class="preview-credits"><p><strong>Created by</strong></p><ul>${p.authors.map(author=>`<li>${esc(author.name)}${author.role?` — ${esc(author.role)}`:''}</li>`).join('')}</ul></div>`:''}<div class="tags">${p.tags.map(t=>`<span>${esc(t)}</span>`).join('')}</div>${p.resources.length?`<nav class="project-links" aria-label="Project links">${p.resources.map(resource=>`<a href="${esc(resource.resource_url)}">${esc(resource.resource_title)} ↗</a>`).join('')}</nav>`:''}${$('#story').innerHTML}`;$('#preview-content').querySelectorAll('[contenteditable]').forEach(el=>el.removeAttribute('contenteditable'));try{const result=await post('preview',{html:$('#preview-content').innerHTML});$('#preview-content').innerHTML=result.html;}catch(e){message(e);return;}enhanceCarousels($('#preview-content'));$('#preview-dialog').showModal()};$('#close-preview').onclick=()=>$('#preview-dialog').close();

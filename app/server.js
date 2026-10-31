@@ -102,7 +102,7 @@ const server = http.createServer(async (req,res) => { try {
    if(p.id) db.prepare('UPDATE projects SET title=?, slug=?, summary=?, cover=?, body=?, published=?, tags=?, authors=?, resources=?, gallery=?, published_at=?, updated=CURRENT_TIMESTAMP WHERE id=?').run(title,slug,String(p.summary||'').slice(0,500),effectiveCover,body,p.published?1:0,tags,authors,resources,gallery,publishedAt,Number(p.id));
    else db.prepare('INSERT INTO projects (title,slug,summary,cover,body,published,tags,authors,resources,gallery,published_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(title,slug,String(p.summary||'').slice(0,500),effectiveCover,body,p.published?1:0,tags,authors,resources,gallery,publishedAt);
   } catch(e) { if(String(e).includes('UNIQUE')) return json(res,400,{error:'That URL is already in use.'}); throw e; }
-  return json(res,200,{ok:true});
+  return json(res,200,{ok:true,id:p.id?Number(p.id):db.prepare('SELECT id FROM projects WHERE slug=?').get(slug)?.id});
  }
  if(path==='/api/upload' && req.method==='POST') { const buf=await read(req,10_000_000); let ext; if(buf.subarray(0,8).equals(Buffer.from('89504e470d0a1a0a','hex'))) ext='png'; else if(buf[0]===0xff && buf[1]===0xd8 && buf[2]===0xff) ext='jpg'; else if(buf.subarray(0,6).toString()==='GIF87a' || buf.subarray(0,6).toString()==='GIF89a') ext='gif'; else if(buf.subarray(0,4).toString()==='RIFF' && buf.subarray(8,12).toString()==='WEBP') ext='webp'; else return json(res,400,{error:'Use a PNG, JPEG, GIF, or WebP image.'}); const name=randomBytes(16).toString('hex')+'.'+ext; writeFileSync(join(data,'uploads',name),buf); return json(res,200,{url:'/uploads/'+name}); }
  return json(res,404,{error:'Not found'}); }
