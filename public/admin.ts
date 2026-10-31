@@ -52,7 +52,8 @@ function edit(project) {
  $('#settings-dialog').insertBefore(gallerySettings,$('#settings-close'));
  const galleryChanged=()=>{dirty=true;$('#save-status').textContent='Unsaved changes';scheduleAutosave();};
  const drawHeaderGallery=()=>{
-  $('#header-gallery-rows').innerHTML=headerGallery.map((slide,index)=>`<div class="header-gallery-row"><img src="${esc(slide.src)}" alt=""><span>${index===0?'Homepage image':'Carousel image '+(index+1)}</span><button class="text-button" type="button" data-remove-header-gallery="${index}">Remove</button></div>`).join('');
+  headerGallery=normalizeSlides(headerGallery);
+  $('#header-gallery-rows').innerHTML=headerGallery.map((slide,index)=>`<div class="header-gallery-row"><img src="${esc(slide.src)}" alt="${esc(slide.alt)}"><span>${esc(slide.caption|| (index===0?'Homepage image':'Carousel image '+(index+1)))}</span><button class="text-button" type="button" data-remove-header-gallery="${index}">Remove</button></div>`).join('');
   $('#header-gallery-rows').querySelectorAll('[data-remove-header-gallery]').forEach(button=>button.onclick=()=>{headerGallery.splice(Number(button.dataset.removeHeaderGallery),1);galleryChanged();drawHeaderGallery();});
  };
  drawHeaderGallery();

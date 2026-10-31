@@ -28,7 +28,8 @@ export function inlineEditor(root, state) {
  gallery.prepend(controls,display);
  let current=0;
  function render(){
-  const images=state.cover();current=Math.min(current,Math.max(0,images.length-1));display.replaceChildren();
+  const images=state.cover().map(image=>typeof image==='string'?{src:image,alt:'',caption:''}:{src:image?.src||'',alt:image?.alt||'',caption:image?.caption||''}).filter(image=>image.src);
+  current=Math.min(current,Math.max(0,images.length-1));display.replaceChildren();
   gallery.classList.toggle('cover-hidden',state.hidden());hide.textContent=state.hidden()?'Show cover':'Hide cover';hide.setAttribute('aria-pressed',String(state.hidden()));
   if(images.length){
    const image=document.createElement('img');image.src=images[current].src;image.alt=images[current].alt||'Project cover';display.append(image);
