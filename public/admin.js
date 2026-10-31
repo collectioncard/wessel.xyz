@@ -1,5 +1,6 @@
 import { enhanceCarousels } from '/carousels.js';
 import '/admin-enhancements.js';
+import { inlineEditor } from '/inline-editor.js';
 const root=document.querySelector('#app');
 const esc=s=>String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
 async function api(path, options={}) { const r=await fetch('/api/'+path,options); const data=await r.json(); if(!r.ok) throw Error(data.error||'Request failed'); return data; }
@@ -9,6 +10,7 @@ function login() { root.innerHTML=`<div class="login"><h1>Welcome back.</h1><p>S
 async function list(mode='projects'){ let projects; try{projects=await api(mode==='trash'?'trash':'projects');}catch{login();return;} const trash=mode==='trash'; root.innerHTML=`<div class="admin-heading"><div><h1>${trash?'Trash':'Projects'}<span>.</span></h1></div><div><button id="logout" class="secondary">Sign out</button>${trash?'<button id="back-projects" class="secondary">Projects</button>':'<button id="trash" class="secondary">Trash</button> <button id="new">+ New project</button>'}</div></div><div class="project-list">${projects.map(p=>trash?`<div class="project-row-wrap"><div class="project-row"><span><strong>${esc(p.title)}</strong><small>Deleted ${esc(p.deleted_at)}</small></span><span><button class="restore-project secondary" data-restore="${p.id}">Restore</button> <button class="delete-project secondary" data-delete="${p.id}">Delete forever</button></span></div></div>`:`<div class="project-row-wrap"><button class="project-row" data-id="${p.id}"><span><strong>${esc(p.title)}</strong><small> /projects/${esc(p.slug)}</small></span><span class="status">${p.published?'Published':'Draft'} &nbsp; →</span></button><button class="delete-project secondary" data-delete="${p.id}">Delete</button></div>`).join('')||`<p class="empty">${trash?'Trash is empty.':'No projects yet. Start with something you’re proud of.'}</p>`}</div>`; root.querySelector('#new')?.addEventListener('click',()=>edit({title:'',slug:'',summary:'',cover:'',body:'[]',published:0})); root.querySelector('#trash')?.addEventListener('click',()=>list('trash')); root.querySelector('#back-projects')?.addEventListener('click',()=>list()); root.querySelector('#logout').onclick=async()=>{await post('logout',{});login();}; root.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>edit(projects.find(p=>p.id===Number(b.dataset.id)))); root.querySelectorAll('[data-restore]').forEach(b=>b.onclick=async()=>{try{await post(`projects/${b.dataset.restore}/restore`,{});list('trash')}catch(err){alert(err.message)}}); root.querySelectorAll('[data-delete]').forEach(b=>b.onclick=async()=>{const project=projects.find(p=>p.id===Number(b.dataset.delete));const forever=trash;if(!project||!confirm(`${forever?'Permanently delete':'Move'} “${project.title}”?`))return;try{await api(`projects/${project.id}${forever?'?permanent=true':''}`,{method:'DELETE'});list(mode)}catch(err){alert(err.message)}}); }
 let activeEditor;
 function edit(project) {
+ window.dispatchEvent(new Event('editor-dispose'));
  activeEditor?.destroy();
  let blocks; try { blocks=JSON.parse(project.body); } catch { blocks=[]; }
  const legacy=blocks.map(b=>b.type==='html'?b.html:b.type==='image'?`<img src="${esc(b.src)}">`:`<${b.type==='heading'?'h2':b.type==='quote'?'blockquote':b.type==='code'?'pre':'p'}>${esc(b.text)}</${b.type==='heading'?'h2':b.type==='quote'?'blockquote':b.type==='code'?'pre':'p'}>`).join('');
@@ -53,6 +55,7 @@ function edit(project) {
   $('#header-gallery-rows').querySelectorAll('[data-remove-header-gallery]').forEach(button=>button.onclick=()=>{headerGallery.splice(Number(button.dataset.removeHeaderGallery),1);galleryChanged();drawHeaderGallery();});
  };
  drawHeaderGallery();
+ let hideCover=!!project.hide_cover;
  const publishedDateLabel=document.createElement('label');
  publishedDateLabel.textContent='Published date';
  const publishedDateInput=document.createElement('input');
@@ -80,8 +83,9 @@ function edit(project) {
  $('#story').addEventListener('mouseup',saveInsertionPoint);
  $('#title').oninput=()=>{dirty=true;if(!project.id)$('#slug').value=$('#title').value.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');scheduleAutosave();};$('#summary').oninput=()=>{dirty=true;scheduleAutosave();};
  $('#settings').onclick=()=>$('#settings-dialog').showModal();$('#settings-close').onclick=()=>$('#settings-dialog').close();
- let autosaveTimer=null, autosaveInFlight=false, autosaveQueued=false;
- function scheduleAutosave(){clearTimeout(autosaveTimer);autosaveTimer=setTimeout(autosave,1200);}
+ let autosaveTimer=null, autosaveInFlight=false, autosaveQueued=false, disposed=false, revision=0;
+ window.addEventListener('editor-dispose',()=>{disposed=true;clearTimeout(autosaveTimer);},{once:true});
+ function scheduleAutosave(){revision++;clearTimeout(autosaveTimer);if(!disposed)autosaveTimer=setTimeout(autosave,1200);}
  async function upload(file){const r=await fetch('/api/upload',{method:'POST',body:file});const result=await r.json();if(!r.ok)throw Error(result.error);dirty=true;scheduleAutosave();return result.url;}
  $('#cover').onchange=async e=>{if(!e.target.files[0])return;try{cover=await upload(e.target.files[0]);$('#cover-status').textContent='Cover image selected';}catch(e){message(e)}};
  $('#header-gallery-files').onchange=async e=>{const files=[...e.target.files];e.target.disabled=true;try{for(const file of files)headerGallery.push(await upload(file));galleryChanged();drawHeaderGallery();}catch(err){message(err)}finally{e.target.disabled=false;e.target.value=''}};
@@ -108,22 +112,25 @@ function edit(project) {
  $('#code-cancel').onclick=()=>$('#code-dialog').close();$('#code-done').onclick=()=>{const html=`<pre data-language="${esc($('#code-language').value)}"><code>${esc($('#code-source').value)}</code></pre>`;if(codeTarget)codeTarget.outerHTML=html;else{restoreInsertionPoint();activeEditor.pasteHTML(html+'<p><br></p>');}dirty=true;markCode();$('#code-dialog').close();};
  markCode();
  markGalleries();$('#image-file').onchange=async e=>{if(!e.target.files[0])return;try{const src=await upload(e.target.files[0]);restoreInsertionPoint();activeEditor.pasteHTML(`<img src="${esc(src)}" alt=""><p><br></p>`);}catch(e){message(e)}};
- const collect=()=>({id:project.id,title:$('#title').value,summary:$('#summary').value,slug:$('#slug').value,cover, gallery:headerGallery, published_at:$('#published-date').value,tags:$('#tags').value.split(',').map(t=>t.trim()).filter(Boolean),authors:authors.filter(author=>author.name?.trim()).map(author=>({name:author.name.trim(),role:(author.role||'').trim(),url:(author.url||author.github||'').trim()})),resources:resources.filter(resource=>resource.resource_title?.trim()&&resource.resource_url?.trim()).map(resource=>({resource_title:resource.resource_title.trim(),resource_url:resource.resource_url.trim()})),body:[{type:'html',html:$('#story').innerHTML}]});
+ const collect=()=>({id:project.id,title:$('#title').value,summary:$('#summary').value,slug:$('#slug').value,cover, hide_cover:hideCover, gallery:headerGallery, published_at:$('#published-date').value,tags:$('#tags').value.split(',').map(t=>t.trim()).filter(Boolean),authors:authors.filter(author=>author.name?.trim()).map(author=>({name:author.name.trim(),role:(author.role||'').trim(),url:(author.url||author.github||'').trim()})),resources:resources.filter(resource=>resource.resource_title?.trim()&&resource.resource_url?.trim()).map(resource=>({resource_title:resource.resource_title.trim(),resource_url:resource.resource_url.trim()})),body:[{type:'html',html:$('#story').innerHTML}]});
  async function autosave(){
-  if(!dirty||!$('#title').value.trim()||!$('#slug').value.trim())return;
+  if(disposed||!dirty||!$('#title').value.trim()||!$('#slug').value.trim())return;
   if(autosaveInFlight){autosaveQueued=true;return;}
   autosaveInFlight=true;
+  const savingRevision=revision;
   try {
    const payload=collect();
    if(project.id && project.published) await post(`projects/${project.id}/draft`,payload);
    else { const result=await post('projects',{...payload,published:false}); if(!project.id&&result.id)project.id=result.id; }
-   dirty=false;$('#save-status').textContent='Saved automatically';
+   if(disposed)return;
+   dirty=revision!==savingRevision;$('#save-status').textContent=dirty?'Unsaved changes':'Saved automatically';if(dirty)autosaveQueued=true;
   } catch(e) { $('#save-status').textContent='Autosave failed'; }
   finally { autosaveInFlight=false; if(autosaveQueued){autosaveQueued=false;scheduleAutosave();} }
  }
- async function save(published){clearTimeout(autosaveTimer);if([...$('#author-rows').querySelectorAll('input[type=url]'),...$('#resource-rows').querySelectorAll('input[type=url]')].some(input=>!input.reportValidity()))return;try{await post('projects',{...collect(),published});dirty=false;activeEditor.destroy();list()}catch(e){$('#save-status').textContent=e.message}};
+ async function save(published){clearTimeout(autosaveTimer);while(autosaveInFlight)await new Promise(resolve=>setTimeout(resolve,50));clearTimeout(autosaveTimer);if([...$('#author-rows').querySelectorAll('input[type=url]'),...$('#resource-rows').querySelectorAll('input[type=url]')].some(input=>!input.reportValidity()))return;try{if(project.published&&!published)await post(`projects/${project.id}/draft`,collect());else{await post('projects',{...collect(),published});if(published&&project.id)await post(`projects/${project.id}/clear-draft`,{});}dirty=false;window.dispatchEvent(new Event('editor-dispose'));activeEditor.destroy();list()}catch(e){$('#save-status').textContent=e.message}};
+ inlineEditor(root,{cover:()=>headerGallery.length?headerGallery:(cover?[cover]:[]),hidden:()=>hideCover,toggle:()=>{hideCover=!hideCover;galleryChanged();},changed:()=>{dirty=true;scheduleAutosave();}});
  $('#draft').onclick=()=>save(false);$('#publish').onclick=()=>save(true);
- $('#back').onclick=()=>{if(!dirty||confirm('Leave without saving your changes?')){activeEditor.destroy();list()}};
- $('#preview').onclick=async()=>{const p=collect();$('#preview-content').innerHTML=`<h1>${esc(p.title)}</h1><p>${esc(p.summary)}</p>${p.authors.length?`<div class="preview-credits"><p><strong>Created by</strong></p><ul>${p.authors.map(author=>`<li>${esc(author.name)}${author.role?` — ${esc(author.role)}`:''}</li>`).join('')}</ul></div>`:''}<div class="tags">${p.tags.map(t=>`<span>${esc(t)}</span>`).join('')}</div>${p.resources.length?`<nav class="project-links" aria-label="Project links">${p.resources.map(resource=>`<a href="${esc(resource.resource_url)}">${esc(resource.resource_title)} ↗</a>`).join('')}</nav>`:''}${$('#story').innerHTML}`;$('#preview-content').querySelectorAll('[contenteditable]').forEach(el=>el.removeAttribute('contenteditable'));try{const result=await post('preview',{html:$('#preview-content').innerHTML});$('#preview-content').innerHTML=result.html;}catch(e){message(e);return;}enhanceCarousels($('#preview-content'));$('#preview-dialog').showModal()};$('#close-preview').onclick=()=>$('#preview-dialog').close();
+ $('#back').onclick=()=>{if(!dirty||confirm('Leave without saving your changes?')){window.dispatchEvent(new Event('editor-dispose'));activeEditor.destroy();list()}};
+ $('#preview').onclick=async()=>{try{const result=await post('project-preview',collect());const frame=document.createElement('iframe');frame.title='Published project preview';frame.setAttribute('sandbox','allow-scripts');frame.srcdoc=result.html;frame.style.cssText='width:100%;height:75vh;border:0';$('#preview-content').replaceChildren(frame);$('#preview-dialog').showModal();}catch(e){message(e)}};$('#close-preview').onclick=()=>$('#preview-dialog').close();
 }
 list();
