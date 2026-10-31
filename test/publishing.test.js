@@ -13,8 +13,21 @@ test('rich projects preserve tags and carousels and keep drafts private',async()
  const base=await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error(`Server did not start: ${startupError}`)),3000);child.stdout.once('data',chunk=>{clearTimeout(timer);const port=/on (\d+)/.exec(chunk.toString())?.[1];port?resolve(`http://localhost:${port}`):reject(Error(`Unexpected startup output: ${chunk}`))});child.once('exit',code=>{clearTimeout(timer);reject(Error(`Server exited ${code}: ${startupError}`))});child.once('error',reject)});
  const login=await fetch(base+'/api/login',{method:'POST',headers:{origin:base},body:JSON.stringify({password:'integration-test-password'})});
  const cookie=login.headers.get('set-cookie').split(';')[0]; const headers={origin:base,cookie};
+ assert.equal(login.headers.get('cache-control'),'no-store');
+ for(const path of ['/admin','/api/projects','/admin.js','/admin-enhancements.js','/inline-editor.js','/carousels.js','/writeupData.json']) {
+  const response=await fetch(base+path,{headers});assert.equal(response.status,200,path);assert.equal(response.headers.get('cache-control'),'no-store',path);
+ }
+ for(const path of ['/','/project.css','/style.css']) {
+  const response=await fetch(base+path);assert.equal(response.headers.get('cache-control'),'no-cache, must-revalidate',path);
+ }
+ const homepage=await(await fetch(base+'/')).text();
+ const bundle=/src="(\/assets\/[^\"]+\.js)"/.exec(homepage)?.[1];
+ assert.ok(bundle,'Built homepage references a versioned JavaScript bundle');
+ assert.equal((await fetch(base+bundle)).headers.get('cache-control'),'public, max-age=31536000, immutable');
  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a/dsAAAAASUVORK5CYII=','base64');
  const uploaded=await(await fetch(base+'/api/upload',{method:'POST',headers,body:png})).json();
+ assert.equal((await fetch(base+uploaded.url)).headers.get('cache-control'),'public, max-age=31536000, immutable');
+ assert.equal((await fetch(base+'/uploads/000000.png')).headers.get('cache-control'),'no-store');
  const html=`<h2>Story</h2><p>A <strong>rich</strong> paragraph</p><figure data-carousel="true"><div data-slide="true"><img src="${uploaded.url}" alt="First image"><figcaption>First caption</figcaption></div><div data-slide="true"><img src="${uploaded.url}" alt="Second image"></div></figure><pre data-language="python"><code>def hello():\n    return True</code></pre><script>alert(1)</script>`;
  const authors=[{name:'Thomas Wessel',role:'Programming',url:'https://github.com/collectioncard'},{name:'Jarod Spangler',role:'Game design',url:'https://github.com/LifeHckr'}];
  const resources=[{resource_title:'GitHub repository',resource_url:'https://github.com/example/gallery'},{resource_title:'Unsafe',resource_url:'javascript:alert(1)'}];
