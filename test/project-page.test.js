@@ -24,6 +24,14 @@ test('credits accept saved and legacy authors and keep profile links safe', () =
  assert.deepEqual(normalizeAuthors('invalid json'),[]);
 });
 
+test('long credit lists stay compact until expanded', () => {
+ const authors = Array.from({length:6}, (_, index) => ({name:`Contributor ${index + 1}`}));
+ const html = projectPage({title:'Many hands',authors},'<p>Story</p>');
+ assert.equal((html.match(/<li>/g)||[]).length,6);
+ assert.match(html,/Show 2 more/);
+ assert.ok(html.indexOf('Contributor 4') < html.indexOf('Show 2 more'));
+});
+
 test('a screenshot gallery replaces the separate cover and unsafe resources are omitted', () => {
  const html=projectPage({title:'Gallery',cover:'/projects/example/first.png',gallery:['/projects/example/first.png','/projects/example/second.png'],resources:[{resource_title:'Source',resource_url:'https://github.com/example/project'},{resource_title:'Unsafe link',resource_url:'javascript:alert(1)'}]},'<p>Story</p>');
  assert.equal((html.match(/src="\/projects\/example\/first.png"/g)||[]).length,1);

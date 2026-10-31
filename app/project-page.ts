@@ -57,7 +57,10 @@ export function projectPage(project: Project, body: string, tags: string[]=[]) {
  const resources = normalizeResources(project.resources);
  const gallery = normalizeSlides(project.gallery);
  const date = project.published_at && /^\d{4}-\d{2}-\d{2}$/.test(project.published_at) ? `<time class="published-date" datetime="${escape(project.published_at)}">Published ${escape(new Date(`${project.published_at}T12:00:00Z`).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric',timeZone:'UTC'}))}</time>` : '';
- const credits = authors.length ? `<aside class="project-credits" aria-labelledby="credits-title"><h2 id="credits-title">Created by</h2><ul>${authors.map(author => `<li>${author.url ? `<a href="${escape(author.url)}">${escape(author.name)}</a>` : `<span>${escape(author.name)}</span>`}${author.role ? `<small>${escape(author.role)}</small>` : ''}</li>`).join('')}</ul></aside>` : '';
+ const authorMarkup = (author: Author) => `<li>${author.url ? `<a href="${escape(author.url)}">${escape(author.name)}</a>` : `<span>${escape(author.name)}</span>`}${author.role ? `<small>${escape(author.role)}</small>` : ''}</li>`;
+ const visibleAuthors = authors.slice(0,4);
+ const additionalAuthors = authors.slice(4);
+ const credits = authors.length ? `<aside class="project-credits" aria-labelledby="credits-title"><h2 id="credits-title">Created by</h2><ul>${visibleAuthors.map(authorMarkup).join('')}</ul>${additionalAuthors.length ? `<details class="credits-more"><summary>Show ${additionalAuthors.length} more</summary><ul>${additionalAuthors.map(authorMarkup).join('')}</ul></details>` : ''}</aside>` : '';
  const resourceLinks = resources.map(resource => `<a href="${escape(resource.resource_url)}">${escape(resource.resource_title)} <span aria-hidden="true">↗</span></a>`).join('');
  const slides=gallery.length?gallery:project.cover?[{src:project.cover,alt:project.title,caption:''}]:[];
  const media=slides.length?`<figure class="project-media" ${slides.length>1?'data-carousel="true"':''} aria-label="Project screenshots">${slides.map((slide,index)=>`<div data-slide="true"><img src="${escape(slide.src)}" alt="${escape(slide.alt||project.title+' — screenshot '+(index+1))}">${slide.caption?`<figcaption>${escape(slide.caption)}</figcaption>`:''}</div>`).join('')}</figure>`:'';

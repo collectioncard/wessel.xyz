@@ -45,6 +45,12 @@ a:focus-visible, button:focus-visible { outline: 2px solid #3d5b73; outline-offs
 .project-credits { border-left: 1px solid #e6e6e6; padding-left: 24px; overflow-wrap: anywhere; }
 .project-credits h2 { margin: 2px 0 16px; font-size: 13px; font-weight: 600; color: #666; }
 .project-credits ul { padding: 0; margin: 0; list-style: none; display: grid; gap: 15px; }
+.credits-more { margin-top: 17px; }
+.credits-more summary { color: #3d5b73; cursor: pointer; font-size: 13px; list-style: none; }
+.credits-more summary::-webkit-details-marker { display: none; }
+.credits-more summary::after { content: ' ↗'; display: inline-block; font-size: 12px; transition: transform .15s ease; }
+.credits-more[open] summary::after { transform: rotate(90deg); }
+.credits-more ul { margin-top: 15px; }
 .project-credits li { font-size: 15px; font-weight: 600; }
 .project-credits small { display: block; margin-top: 3px; font-size: 13px; line-height: 1.5; font-weight: 400; color: #666; }
 figure { margin: 36px 0; }
