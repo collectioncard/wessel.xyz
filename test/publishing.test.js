@@ -30,7 +30,7 @@ test('rich projects preserve tags and carousels and keep drafts private',async()
  const withDraft=(await(await fetch(base+'/api/projects',{headers})).json())[0];assert.ok(withDraft.draft_payload);assert.match((await(await fetch(base+'/projects/gallery-project')).text()),/First caption/);assert.doesNotMatch((await(await fetch(base+'/projects/gallery-project')).text()),/Changed draft/);
  assert.deepEqual(JSON.parse(withDraft.draft_payload).authors,draft.authors);assert.doesNotMatch((await(await fetch(base+'/projects/gallery-project')).text()),/Pending collaborator/);
  r=await fetch(base+`/api/projects/${saved.id}/clear-draft`,{method:'POST',headers});assert.equal(r.status,200);
- const home=await(await fetch(base+'/writeupData.json')).json();assert.ok(home.writeups.some(p=>p.title==='Pizza With Gun'));assert.ok(home.writeups.some(p=>p.title==='Gallery project'&&p.tags.includes('Code')));
+ const home=await(await fetch(base+'/writeupData.json')).json();assert.ok(home.writeups.some(p=>p.title==='Gallery project'&&p.tags.includes('Code')));
  assert.deepEqual(home.writeups.find(project=>project.title==='Gallery project').authors,authors);
  r=await fetch(base+'/api/projects',{method:'POST',headers,body:JSON.stringify({...p,id:saved.id,published:true,authors:draft.authors})});assert.equal(r.status,200);
  assert.match((await(await fetch(base+'/projects/gallery-project')).text()),/Pending collaborator/);
@@ -43,6 +43,6 @@ test('rich projects preserve tags and carousels and keep drafts private',async()
  let trash=await(await fetch(base+'/api/trash',{headers})).json();assert.equal(trash.length,1);assert.equal(trash[0].title,'Gallery project');
  r=await fetch(base+`/api/projects/${saved.id}/restore`,{method:'POST',headers});assert.equal(r.status,200);assert.equal((await(await fetch(base+'/api/projects',{headers})).json()).length,1);
  r=await fetch(base+`/api/projects/${saved.id}`,{method:'DELETE',headers});assert.equal(r.status,200);r=await fetch(base+`/api/projects/${saved.id}?permanent=true`,{method:'DELETE',headers});assert.equal(r.status,200);assert.equal((await(await fetch(base+'/api/trash',{headers})).json()).length,0);
- const original=await fetch(base+'/projects/pwg');assert.equal(original.status,200);const originalPage=await original.text();assert.match(originalPage,/Jack Wilhelm/);assert.match(originalPage,/href="https:\/\/github.com\/JackWilhelm"/);assert.equal((originalPage.match(/src="\/projects\/pwg\/img\/pwg.png"/g)||[]).length,1);
+ assert.equal((await fetch(base+'/projects/pwg')).status,404);
  } finally {child.kill();rmSync(data,{recursive:true,force:true});}
 });

@@ -1,4 +1,4 @@
-import { clean, projectPage, markdown, highlight, languages, normalizeAuthors } from './project-page.js';
+import { clean, projectPage, highlight, languages, normalizeAuthors } from './project-page.js';
 import http from 'node:http';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, readFileSync, writeFileSync, existsSync, statSync } from 'node:fs';
@@ -48,10 +48,6 @@ const server = http.createServer(async (req,res) => { try {
  const slug=decodeURIComponent(path.slice(10));
  const p=db.prepare('SELECT * FROM projects WHERE slug=? AND published=1 AND deleted_at IS NULL').get(slug);
  if(p) return send(res,200,projectPage(p,renderBody(p.body),JSON.parse(p.tags)));
- const originals=JSON.parse(readFileSync('frontend/public/writeupData.json','utf8')).writeups;
- const old=originals.find(p=>p.assetFolder===slug);
- if(old) { const src=image=>image.startsWith('http')?image:`/projects/${old.assetFolder}/img/${image}`;
- return send(res,200,projectPage({title:old.title,summary:old.subtitle,authors:old.authors,resources:old.resources,cover:old.images?.[0]?src(old.images[0]):'',gallery:(old.images||[]).map(src)},markdown(readFileSync(`frontend/dist/projects/${old.assetFolder}/writeup.md`,'utf8')),old.tags||[])); }
  return send(res,404,'Project not found');
  }
  if(req.method==='GET' && path==='/admin') return send(res,200,page('Admin',`<main class="admin-shell"><a href="/" class="brand">Thomas Wessel<span>.</span></a><div id="app"></div></main><link rel="stylesheet" href="/highlight.css"><link rel="stylesheet" href="/medium-editor.css"><link rel="stylesheet" href="/medium-theme.css"><script src="/medium-editor.js"></script><script type="module" src="/admin.js"></script>`));
